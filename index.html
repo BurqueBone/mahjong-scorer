@@ -7,16 +7,23 @@
 <title>Mahjong Scorer</title>
 <style>
   :root {
-    --bg: #1a1a2e;
-    --surface: #16213e;
-    --card: #0f3460;
-    --accent: #e94560;
-    --accent-light: #ff6b81;
-    --gold: #f5c518;
-    --green: #2ecc71;
-    --text: #eee;
-    --text-dim: #aaa;
-    --radius: 12px;
+    --bg: #faf7f2;
+    --surface: #fff;
+    --card: #f0ede8;
+    --accent: #FF99C8;
+    --accent-light: #ffb8d9;
+    --accent-dark: #e07aab;
+    --gold: #d4a017;
+    --green: #6dbf8b;
+    --mint: #D0F4DE;
+    --blue: #A9DEF9;
+    --mauve: #E4C1F9;
+    --yellow: #FCF6BD;
+    --text: #2d2d2d;
+    --text-dim: #777;
+    --radius: 14px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-pop: 0 3px 12px rgba(0,0,0,0.12);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -30,7 +37,7 @@
   .screen.active { display: block; }
 
   h1 { text-align: center; font-size: 1.6rem; margin-bottom: 8px; }
-  h2 { font-size: 1.2rem; margin-bottom: 12px; color: var(--gold); }
+  h2 { font-size: 1.2rem; margin-bottom: 12px; color: var(--accent-dark); }
   .subtitle { text-align: center; color: var(--text-dim); font-size: 0.85rem; margin-bottom: 20px; }
 
   /* Buttons */
@@ -39,34 +46,35 @@
     font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
     text-align: center;
   }
-  .btn:active { opacity: 0.7; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid #334; }
+  .btn:active { opacity: 0.8; transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(255,153,200,0.4); }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1.5px solid #ddd; box-shadow: var(--shadow); }
   .btn-small { display: inline-block; width: auto; padding: 8px 16px; font-size: 0.85rem; }
-  .btn-danger { background: #c0392b; color: #fff; }
-  .btn-gold { background: var(--gold); color: #111; }
+  .btn-danger { background: #e06070; color: #fff; box-shadow: 0 3px 10px rgba(224,96,112,0.3); }
+  .btn-gold { background: linear-gradient(135deg, var(--yellow), var(--mint)); color: #2d2d2d; font-weight: 700; box-shadow: 0 3px 10px rgba(208,244,222,0.5); }
   .btn + .btn { margin-top: 10px; }
-  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
 
   /* Inputs */
   input[type="text"], input[type="number"] {
-    width: 100%; padding: 12px; border: 1px solid #334; border-radius: var(--radius);
-    background: var(--surface); color: var(--text); font-size: 1rem;
+    width: 100%; padding: 12px; border: 1.5px solid #ddd; border-radius: var(--radius);
+    background: var(--surface); color: var(--text); font-size: 1rem; box-shadow: var(--shadow);
   }
   input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
   /* Cards */
   .card {
     background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+    box-shadow: var(--shadow); border: 1px solid #eee;
   }
 
   /* Player inputs */
   .player-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .player-row input { flex: 1; }
   .player-num {
-    width: 28px; height: 28px; border-radius: 50%; background: var(--card);
+    width: 28px; height: 28px; border-radius: 50%; background: var(--blue);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+    font-size: 0.8rem; font-weight: 700; flex-shrink: 0; color: #2d2d2d;
   }
   .remove-player {
     width: 32px; height: 32px; border: none; border-radius: 50%;
@@ -77,41 +85,43 @@
   /* Mode selector */
   .mode-options { display: flex; flex-direction: column; gap: 8px; }
   .mode-option {
-    padding: 14px; border-radius: var(--radius); border: 2px solid #334;
-    background: var(--surface); cursor: pointer; transition: border-color 0.15s;
+    padding: 14px; border-radius: var(--radius); border: 2px solid #ddd;
+    background: var(--surface); cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow);
   }
-  .mode-option.selected { border-color: var(--accent); background: var(--card); }
+  .mode-option.selected { border-color: var(--accent); background: #fff0f5; box-shadow: 0 2px 10px rgba(255,153,200,0.25); }
   .mode-option .mode-title { font-weight: 600; margin-bottom: 4px; }
   .mode-option .mode-desc { font-size: 0.8rem; color: var(--text-dim); }
 
   /* Scoreboard table */
   .score-table { width: 100%; border-collapse: collapse; }
   .score-table th, .score-table td {
-    padding: 10px 8px; text-align: left; border-bottom: 1px solid #223;
+    padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee;
   }
-  .score-table th { color: var(--gold); font-size: 0.8rem; text-transform: uppercase; }
+  .score-table th { color: var(--accent-dark); font-size: 0.8rem; text-transform: uppercase; }
   .score-table .score-val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .score-positive { color: var(--green); }
-  .score-negative { color: var(--accent); }
+  .score-positive { color: #3a9e5e; }
+  .score-negative { color: #d45; }
 
   /* Player select buttons */
   .player-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
   .player-btn {
-    padding: 14px 8px; border-radius: var(--radius); border: 2px solid #334;
+    padding: 14px 8px; border-radius: var(--radius); border: 2px solid #ddd;
     background: var(--surface); color: var(--text); font-size: 1rem;
     font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s;
+    box-shadow: var(--shadow);
   }
-  .player-btn.selected { border-color: var(--accent); background: var(--card); }
-  .player-btn.wall-btn { grid-column: 1 / -1; background: var(--card); border-color: #445; }
+  .player-btn:active { transform: scale(0.96); }
+  .player-btn.selected { border-color: var(--accent); background: #fff0f5; box-shadow: 0 2px 10px rgba(255,153,200,0.3); }
+  .player-btn.wall-btn { grid-column: 1 / -1; background: var(--card); border-color: #ddd; }
 
   /* Checkbox row */
   .check-row {
     display: flex; align-items: center; gap: 10px; padding: 10px 0;
-    border-bottom: 1px solid #223; cursor: pointer; user-select: none;
+    border-bottom: 1px solid #eee; cursor: pointer; user-select: none;
   }
   .check-row:last-child { border-bottom: none; }
   .check-row input[type="checkbox"] {
-    width: 22px; height: 22px; accent-color: var(--accent); flex-shrink: 0;
+    width: 22px; height: 22px; accent-color: var(--accent-dark); flex-shrink: 0;
   }
   .check-label { flex: 1; }
   .check-label .check-title { font-weight: 600; }
@@ -119,7 +129,7 @@
 
   /* Hand history */
   .hand-item {
-    padding: 10px 0; border-bottom: 1px solid #223; font-size: 0.9rem;
+    padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem;
   }
   .hand-item:last-child { border-bottom: none; }
   .hand-num { color: var(--text-dim); font-size: 0.75rem; }
@@ -135,9 +145,9 @@
   /* Toast notification */
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--green); color: #111; padding: 10px 20px; border-radius: var(--radius);
+    background: var(--mint); color: #2d2d2d; padding: 10px 20px; border-radius: var(--radius);
     font-weight: 600; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s;
-    z-index: 100; pointer-events: none;
+    z-index: 100; pointer-events: none; box-shadow: var(--shadow-pop);
   }
   .toast.show { opacity: 1; }
 
@@ -153,10 +163,10 @@
   .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
   .tab {
     flex: 1; padding: 10px; border: none; border-radius: var(--radius) var(--radius) 0 0;
-    background: var(--surface); color: var(--text-dim); font-size: 0.85rem;
-    font-weight: 600; cursor: pointer; text-align: center;
+    background: var(--card); color: var(--text-dim); font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s;
   }
-  .tab.active { background: var(--card); color: var(--text); }
+  .tab.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(255,153,200,0.3); }
 
   /* Misc */
   .mt-8 { margin-top: 8px; }
@@ -169,16 +179,16 @@
   /* Top bar in game screen */
   .top-bar {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0; margin-bottom: 12px; border-bottom: 1px solid #223;
+    padding: 8px 0; margin-bottom: 12px; border-bottom: 1px solid #ddd;
   }
   .top-bar .hand-count { font-size: 0.85rem; color: var(--text-dim); }
 
   /* Tournament styles */
   .table-card {
     background: var(--surface); border-radius: var(--radius); padding: 16px;
-    margin-bottom: 12px; border: 2px solid #334;
+    margin-bottom: 12px; border: 2px solid #ddd; box-shadow: var(--shadow);
   }
-  .table-card.recording { border-color: var(--accent); }
+  .table-card.recording { border-color: var(--accent); box-shadow: 0 3px 14px rgba(255,153,200,0.2); }
   .table-header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 10px;
@@ -188,12 +198,13 @@
   .table-players { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .table-player-chip {
     padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
-    background: var(--card); border: 2px solid transparent; cursor: pointer;
-    transition: all 0.15s; user-select: none;
+    background: var(--blue); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; user-select: none; box-shadow: var(--shadow); color: #2d2d2d;
   }
-  .table-player-chip.winner-pick { border-color: var(--accent); background: #1a0a1e; }
+  .table-player-chip:active { transform: scale(0.95); }
+  .table-player-chip.winner-pick { border-color: var(--accent); background: #fff0f5; box-shadow: 0 2px 8px rgba(255,153,200,0.3); }
   .table-player-chip .chip-wins {
-    font-size: 0.7rem; color: var(--gold); margin-left: 4px;
+    font-size: 0.7rem; color: var(--accent-dark); margin-left: 4px; font-weight: 700;
   }
   .table-actions { display: flex; gap: 8px; }
   .table-actions .btn { flex: 1; }
@@ -201,35 +212,36 @@
   /* Tournament scoreboard */
   .tourney-score-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 0; border-bottom: 1px solid #223;
+    padding: 10px 0; border-bottom: 1px solid #eee;
   }
   .tourney-score-row:last-child { border-bottom: none; }
   .tourney-rank { width: 28px; font-weight: 700; }
   .tourney-name { flex: 1; font-weight: 600; }
-  .tourney-wins { width: 50px; text-align: right; color: var(--gold); font-weight: 700; }
+  .tourney-wins { width: 50px; text-align: right; color: var(--accent-dark); font-weight: 700; }
 
   /* Table assignment in setup */
   .table-setup-card {
     background: var(--surface); border-radius: var(--radius); padding: 14px;
-    margin-bottom: 10px;
+    margin-bottom: 10px; box-shadow: var(--shadow); border: 1px solid #eee;
   }
   .table-setup-header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 8px;
   }
-  .table-setup-title { font-weight: 700; color: var(--gold); }
+  .table-setup-title { font-weight: 700; color: var(--accent-dark); }
   .player-pool { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
   .pool-chip {
     padding: 8px 14px; border-radius: 20px; font-size: 0.9rem;
-    background: var(--card); cursor: pointer; user-select: none;
-    border: 2px solid transparent; transition: all 0.15s;
+    background: var(--mint); cursor: pointer; user-select: none;
+    border: 2px solid transparent; transition: all 0.15s; box-shadow: var(--shadow); color: #2d2d2d;
   }
   .pool-chip.assigned { opacity: 0.3; cursor: default; }
-  .pool-chip.selected { border-color: var(--accent); background: #1a0a1e; }
+  .pool-chip.selected { border-color: var(--accent); background: #fff0f5; }
   .assigned-players { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
   .assigned-chip {
     padding: 6px 10px; border-radius: 20px; font-size: 0.85rem;
-    background: var(--card); display: flex; align-items: center; gap: 6px;
+    background: var(--mauve); display: flex; align-items: center; gap: 6px;
+    box-shadow: var(--shadow); color: #2d2d2d;
   }
   .assigned-chip .remove-assigned {
     cursor: pointer; color: var(--accent); font-weight: 700; font-size: 0.9rem;
@@ -238,54 +250,54 @@
   /* Move player UI */
   .move-panel {
     background: var(--card); border-radius: var(--radius); padding: 12px;
-    margin-top: 10px; border: 1px solid #445;
+    margin-top: 10px; border: 1px solid #ddd;
   }
   .move-panel-title { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px; }
   .move-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
   .move-chip {
     padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
     background: var(--surface); border: 2px solid transparent; cursor: pointer;
-    transition: all 0.15s; user-select: none;
+    transition: all 0.15s; user-select: none; box-shadow: var(--shadow);
   }
-  .move-chip.selected { border-color: var(--gold); background: #1a1a0e; }
+  .move-chip.selected { border-color: var(--accent); background: #fff0f5; }
   .move-dest { display: flex; flex-wrap: wrap; gap: 6px; }
   .move-dest-btn {
     padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
-    background: var(--surface); border: 2px solid transparent; cursor: pointer;
-    transition: all 0.15s; color: var(--text);
+    background: var(--mint); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; color: #2d2d2d; box-shadow: var(--shadow);
   }
   .move-dest-btn:active { opacity: 0.7; }
 
   /* Unseated players section */
   .unseated-section {
-    background: var(--surface); border-radius: var(--radius); padding: 16px;
-    margin-bottom: 12px; border: 2px dashed #445;
+    background: var(--yellow); border-radius: var(--radius); padding: 16px;
+    margin-bottom: 12px; border: 2px dashed var(--accent); box-shadow: var(--shadow);
   }
   .unseated-header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 10px;
   }
-  .unseated-title { font-weight: 700; color: var(--text-dim); font-size: 0.95rem; }
+  .unseated-title { font-weight: 700; color: #2d2d2d; font-size: 0.95rem; }
   .unseated-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .unseated-chip {
     padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
-    background: var(--card); border: 2px solid transparent; cursor: pointer;
-    transition: all 0.15s; user-select: none;
+    background: var(--surface); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; user-select: none; box-shadow: var(--shadow); color: #2d2d2d;
   }
-  .unseated-chip.selected { border-color: var(--gold); background: #1a1a0e; }
+  .unseated-chip.selected { border-color: var(--accent); background: #fff0f5; }
   .unseated-dest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
   /* Drop panel */
   .drop-panel {
     background: var(--card); border-radius: var(--radius); padding: 12px;
-    margin-top: 10px; border: 1px solid #445;
+    margin-top: 10px; border: 1px solid #ddd;
   }
   .drop-panel-title { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px; }
   .drop-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
   .drop-chip {
     padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
     background: var(--surface); border: 2px solid transparent; cursor: pointer;
-    transition: all 0.15s; user-select: none;
+    transition: all 0.15s; user-select: none; box-shadow: var(--shadow);
   }
   .drop-chip:active { opacity: 0.7; }
 </style>
@@ -323,7 +335,7 @@
 
   <button class="btn btn-primary" onclick="startGame()">Start Game</button>
 
-  <div style="margin-top:20px; padding-top:16px; border-top:1px solid #334;">
+  <div style="margin-top:20px; padding-top:16px; border-top:1px solid #ddd;">
     <button class="btn btn-gold" onclick="showTourneySetup()">🏆 Tournament Mode</button>
   </div>
 
@@ -1644,7 +1656,7 @@ function toggleDropPanel(tableIndex) {
     <div class="drop-chips">${playerChips}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <span class="drop-chip" onclick="dropAllPlayers(${tableIndex})" style="background:var(--accent);color:#fff;">Drop All</span>
-      <span class="drop-chip" onclick="closeDropPanel(${tableIndex})" style="background:transparent;color:var(--text-dim);border:1px solid #445;">Cancel</span>
+      <span class="drop-chip" onclick="closeDropPanel(${tableIndex})" style="background:transparent;color:var(--text-dim);border:1px solid #ddd;">Cancel</span>
     </div>
   </div>`;
 }
@@ -1852,7 +1864,7 @@ function renderTourneyLeaderboard() {
   const sorted = [...tourney.players].sort((a, b) => (tourney.scores[b] || 0) - (tourney.scores[a] || 0));
   const container = document.getElementById('tourney-leaderboard');
   if (!tourney.roundsPlayed) tourney.roundsPlayed = {};
-  container.innerHTML = `<div style="display:flex;padding:8px 0;border-bottom:1px solid #223;font-size:0.8rem;color:var(--gold);text-transform:uppercase;">
+  container.innerHTML = `<div style="display:flex;padding:8px 0;border-bottom:1px solid #eee;font-size:0.8rem;color:var(--accent-dark);text-transform:uppercase;">
     <span style="width:28px;">#</span><span style="flex:1;">Player</span><span style="width:55px;text-align:right;">Points</span><span style="width:45px;text-align:right;">Wins</span><span style="width:45px;text-align:right;">Rnds</span>
   </div>` + sorted.map((p, i) => {
     const pts = tourney.scores[p] || 0;

@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mahjong Scorer</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --card: #0f3460;
+    --accent: #e94560;
+    --accent-light: #ff6b81;
+    --gold: #f5c518;
+    --green: #2ecc71;
+    --text: #eee;
+    --text-dim: #aaa;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .screen { display: none; padding: 16px; max-width: 500px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  h1 { text-align: center; font-size: 1.6rem; margin-bottom: 8px; }
+  h2 { font-size: 1.2rem; margin-bottom: 12px; color: var(--gold); }
+  .subtitle { text-align: center; color: var(--text-dim); font-size: 0.85rem; margin-bottom: 20px; }
+
+  /* Buttons */
+  .btn {
+    display: block; width: 100%; padding: 14px; border: none; border-radius: var(--radius);
+    font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    text-align: center;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid #334; }
+  .btn-small { display: inline-block; width: auto; padding: 8px 16px; font-size: 0.85rem; }
+  .btn-danger { background: #c0392b; color: #fff; }
+  .btn-gold { background: var(--gold); color: #111; }
+  .btn + .btn { margin-top: 10px; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* Inputs */
+  input[type="text"], input[type="number"] {
+    width: 100%; padding: 12px; border: 1px solid #334; border-radius: var(--radius);
+    background: var(--surface); color: var(--text); font-size: 1rem;
+  }
+  input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+  }
+
+  /* Player inputs */
+  .player-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .player-row input { flex: 1; }
+  .player-num {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--card);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+  }
+  .remove-player {
+    width: 32px; height: 32px; border: none; border-radius: 50%;
+    background: transparent; color: var(--accent); font-size: 1.2rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Mode selector */
+  .mode-options { display: flex; flex-direction: column; gap: 8px; }
+  .mode-option {
+    padding: 14px; border-radius: var(--radius); border: 2px solid #334;
+    background: var(--surface); cursor: pointer; transition: border-color 0.15s;
+  }
+  .mode-option.selected { border-color: var(--accent); background: var(--card); }
+  .mode-option .mode-title { font-weight: 600; margin-bottom: 4px; }
+  .mode-option .mode-desc { font-size: 0.8rem; color: var(--text-dim); }
+
+  /* Scoreboard table */
+  .score-table { width: 100%; border-collapse: collapse; }
+  .score-table th, .score-table td {
+    padding: 10px 8px; text-align: left; border-bottom: 1px solid #223;
+  }
+  .score-table th { color: var(--gold); font-size: 0.8rem; text-transform: uppercase; }
+  .score-table .score-val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .score-positive { color: var(--green); }
+  .score-negative { color: var(--accent); }
+
+  /* Player select buttons */
+  .player-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .player-btn {
+    padding: 14px 8px; border-radius: var(--radius); border: 2px solid #334;
+    background: var(--surface); color: var(--text); font-size: 1rem;
+    font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s;
+  }
+  .player-btn.selected { border-color: var(--accent); background: var(--card); }
+  .player-btn.wall-btn { grid-column: 1 / -1; background: var(--card); border-color: #445; }
+
+  /* Checkbox row */
+  .check-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid #223; cursor: pointer; user-select: none;
+  }
+  .check-row:last-child { border-bottom: none; }
+  .check-row input[type="checkbox"] {
+    width: 22px; height: 22px; accent-color: var(--accent); flex-shrink: 0;
+  }
+  .check-label { flex: 1; }
+  .check-label .check-title { font-weight: 600; }
+  .check-label .check-desc { font-size: 0.8rem; color: var(--text-dim); }
+
+  /* Hand history */
+  .hand-item {
+    padding: 10px 0; border-bottom: 1px solid #223; font-size: 0.9rem;
+  }
+  .hand-item:last-child { border-bottom: none; }
+  .hand-num { color: var(--text-dim); font-size: 0.75rem; }
+  .hand-detail { margin-top: 2px; }
+  .hand-payments { color: var(--text-dim); font-size: 0.8rem; margin-top: 2px; }
+
+  /* Section spacing */
+  .section { margin-bottom: 20px; }
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--green); color: #111; padding: 10px 20px; border-radius: var(--radius);
+    font-weight: 600; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s;
+    z-index: 100; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Payment breakdown */
+  .payment-line { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
+  .payment-line .pay-amount { font-weight: 600; }
+
+  /* Rank badge */
+  .rank { width: 24px; text-align: center; }
+  .rank-1 { color: var(--gold); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab {
+    flex: 1; padding: 10px; border: none; border-radius: var(--radius) var(--radius) 0 0;
+    background: var(--surface); color: var(--text-dim); font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; text-align: center;
+  }
+  .tab.active { background: var(--card); color: var(--text); }
+
+  /* Misc */
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-8 { margin-bottom: 8px; }
+  .text-center { text-align: center; }
+  .text-dim { color: var(--text-dim); font-size: 0.85rem; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+  /* Top bar in game screen */
+  .top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; margin-bottom: 12px; border-bottom: 1px solid #223;
+  }
+  .top-bar .hand-count { font-size: 0.85rem; color: var(--text-dim); }
+
+  /* Tournament styles */
+  .table-card {
+    background: var(--surface); border-radius: var(--radius); padding: 16px;
+    margin-bottom: 12px; border: 2px solid #334;
+  }
+  .table-card.recording { border-color: var(--accent); }
+  .table-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .table-title { font-weight: 700; font-size: 1rem; }
+  .table-round { font-size: 0.8rem; color: var(--text-dim); }
+  .table-players { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .table-player-chip {
+    padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
+    background: var(--card); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .table-player-chip.winner-pick { border-color: var(--accent); background: #1a0a1e; }
+  .table-player-chip .chip-wins {
+    font-size: 0.7rem; color: var(--gold); margin-left: 4px;
+  }
+  .table-actions { display: flex; gap: 8px; }
+  .table-actions .btn { flex: 1; }
+
+  /* Tournament scoreboard */
+  .tourney-score-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #223;
+  }
+  .tourney-score-row:last-child { border-bottom: none; }
+  .tourney-rank { width: 28px; font-weight: 700; }
+  .tourney-name { flex: 1; font-weight: 600; }
+  .tourney-wins { width: 50px; text-align: right; color: var(--gold); font-weight: 700; }
+
+  /* Table assignment in setup */
+  .table-setup-card {
+    background: var(--surface); border-radius: var(--radius); padding: 14px;
+    margin-bottom: 10px;
+  }
+  .table-setup-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .table-setup-title { font-weight: 700; color: var(--gold); }
+  .player-pool { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .pool-chip {
+    padding: 8px 14px; border-radius: 20px; font-size: 0.9rem;
+    background: var(--card); cursor: pointer; user-select: none;
+    border: 2px solid transparent; transition: all 0.15s;
+  }
+  .pool-chip.assigned { opacity: 0.3; cursor: default; }
+  .pool-chip.selected { border-color: var(--accent); background: #1a0a1e; }
+  .assigned-players { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
+  .assigned-chip {
+    padding: 6px 10px; border-radius: 20px; font-size: 0.85rem;
+    background: var(--card); display: flex; align-items: center; gap: 6px;
+  }
+  .assigned-chip .remove-assigned {
+    cursor: pointer; color: var(--accent); font-weight: 700; font-size: 0.9rem;
+  }
+
+  /* Move player UI */
+  .move-panel {
+    background: var(--card); border-radius: var(--radius); padding: 12px;
+    margin-top: 10px; border: 1px solid #445;
+  }
+  .move-panel-title { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px; }
+  .move-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .move-chip {
+    padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
+    background: var(--surface); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .move-chip.selected { border-color: var(--gold); background: #1a1a0e; }
+  .move-dest { display: flex; flex-wrap: wrap; gap: 6px; }
+  .move-dest-btn {
+    padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
+    background: var(--surface); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; color: var(--text);
+  }
+  .move-dest-btn:active { opacity: 0.7; }
+
+  /* Unseated players section */
+  .unseated-section {
+    background: var(--surface); border-radius: var(--radius); padding: 16px;
+    margin-bottom: 12px; border: 2px dashed #445;
+  }
+  .unseated-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .unseated-title { font-weight: 700; color: var(--text-dim); font-size: 0.95rem; }
+  .unseated-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .unseated-chip {
+    padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
+    background: var(--card); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .unseated-chip.selected { border-color: var(--gold); background: #1a1a0e; }
+  .unseated-dest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+  /* Drop panel */
+  .drop-panel {
+    background: var(--card); border-radius: var(--radius); padding: 12px;
+    margin-top: 10px; border: 1px solid #445;
+  }
+  .drop-panel-title { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px; }
+  .drop-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .drop-chip {
+    padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
+    background: var(--surface); border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .drop-chip:active { opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<!-- ==================== SETUP SCREEN ==================== -->
+<div id="setup-screen" class="screen active">
+  <h1>🀄 Mahjong Scorer</h1>
+  <p class="subtitle">American Mahjong &middot; Offline &middot; No account needed</p>
+
+  <div class="card section">
+    <h2>Players</h2>
+    <div id="player-inputs"></div>
+    <button class="btn btn-secondary btn-small mt-8" id="add-player-btn" onclick="addPlayerInput()">+ Add Player</button>
+  </div>
+
+  <div class="card section">
+    <h2>Scoring Mode</h2>
+    <div class="mode-options" id="mode-options">
+      <div class="mode-option selected" data-mode="simple" onclick="selectMode('simple')">
+        <div class="mode-title">Simple Win Tracking</div>
+        <div class="mode-desc">Log winner + hand value. Running totals only.</div>
+      </div>
+      <div class="mode-option" data-mode="money" onclick="selectMode('money')">
+        <div class="mode-title">Money-Based Payments</div>
+        <div class="mode-desc">Discarder pays 2×, others 1×. Self-pick, jokerless, 3-exposure rules.</div>
+      </div>
+      <div class="mode-option" data-mode="bigcard" onclick="selectMode('bigcard')">
+        <div class="mode-title">Full Big Card System</div>
+        <div class="mode-desc">Point bonuses (self-picked, jokerless, no exposures, finesse) + payment multipliers.</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+
+  <div style="margin-top:20px; padding-top:16px; border-top:1px solid #334;">
+    <button class="btn btn-gold" onclick="showTourneySetup()">🏆 Tournament Mode</button>
+  </div>
+
+  <div id="resume-section" style="display:none;" class="mt-16">
+    <p class="text-center text-dim mb-8">You have a saved game in progress.</p>
+    <button class="btn btn-gold" onclick="resumeGame()">Resume Saved Game</button>
+  </div>
+</div>
+
+<!-- ==================== GAME SCREEN ==================== -->
+<div id="game-screen" class="screen">
+  <div class="top-bar">
+    <span style="font-weight:700;">🀄 Mahjong</span>
+    <span class="hand-count" id="hand-counter">Hand 1</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="score" onclick="switchTab('score')">Score Hand</button>
+    <button class="tab" data-tab="board" onclick="switchTab('board')">Scoreboard</button>
+    <button class="tab" data-tab="history" onclick="switchTab('history')">History</button>
+  </div>
+
+  <!-- ---- Score Tab ---- -->
+  <div id="tab-score" class="tab-content">
+    <div class="card section">
+      <h2>Who won?</h2>
+      <div class="player-select-grid" id="winner-grid"></div>
+    </div>
+
+    <div id="hand-value-section" class="card section" style="display:none;">
+      <h2>Hand Value</h2>
+      <div class="player-select-grid" id="hand-value-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <button class="player-btn" onclick="selectHandValue(25)">25</button>
+        <button class="player-btn" onclick="selectHandValue(30)">30</button>
+        <button class="player-btn" onclick="selectHandValue(40)">40</button>
+        <button class="player-btn" onclick="selectHandValue(45)">45</button>
+        <button class="player-btn" onclick="selectHandValue(50)">50</button>
+        <button class="player-btn" onclick="selectHandValue(75)">75</button>
+        <button class="player-btn" onclick="selectHandValue(85)">85</button>
+      </div>
+      <input type="hidden" id="hand-value" value="">
+    </div>
+
+    <div id="discarder-section" class="card section" style="display:none;">
+      <h2>Who discarded?</h2>
+      <div class="player-select-grid" id="discarder-grid"></div>
+    </div>
+
+    <div id="bonuses-section" class="card section" style="display:none;">
+      <h2>Bonuses</h2>
+      <div class="check-row" onclick="toggleCheck('bonus-jokerless')">
+        <input type="checkbox" id="bonus-jokerless">
+        <div class="check-label">
+          <div class="check-title">Jokerless</div>
+          <div class="check-desc">No jokers used (+20 pts, 2× multiplier)</div>
+        </div>
+      </div>
+      <div class="check-row" onclick="toggleCheck('bonus-no-expose')">
+        <input type="checkbox" id="bonus-no-expose">
+        <div class="check-label">
+          <div class="check-title">No Exposures</div>
+          <div class="check-desc">Concealed hand (+10 pts)</div>
+        </div>
+      </div>
+      <div class="check-row" onclick="toggleCheck('bonus-finesse')">
+        <input type="checkbox" id="bonus-finesse">
+        <div class="check-label">
+          <div class="check-title">Finesse</div>
+          <div class="check-desc">Won on a specific tile (+10 pts)</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="three-exposure-section" class="card section" style="display:none;">
+      <div class="check-row" onclick="toggleCheck('three-exposure')">
+        <input type="checkbox" id="three-exposure">
+        <div class="check-label">
+          <div class="check-title">3 Exposures Rule</div>
+          <div class="check-desc">Discarder pays for the entire table</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="penalty-section" class="card section" style="display:none;">
+      <h2>Penalty <span style="font-weight:400;font-size:0.8rem;color:var(--text-dim);">(optional)</span></h2>
+      <p class="text-dim mb-8" style="font-size:0.8rem;">Tap a player to assign a penalty, tap again to remove</p>
+      <div class="player-select-grid" id="penalty-player-grid"></div>
+      <div id="penalty-amount-section" style="display:none; margin-top:10px;">
+        <p style="font-size:0.85rem; margin-bottom:6px; color:var(--text-dim);">Penalty amount:</p>
+        <div class="player-select-grid" id="penalty-amount-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <button class="player-btn" onclick="selectPenaltyAmount(10)">−10</button>
+          <button class="player-btn" onclick="selectPenaltyAmount(20)">−20</button>
+          <button class="player-btn" onclick="selectPenaltyAmount(25)">−25</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="payment-preview" class="card section" style="display:none;">
+      <h2>Payment Preview</h2>
+      <div id="payment-lines"></div>
+    </div>
+
+    <button class="btn btn-primary" id="record-btn" onclick="recordHand()" disabled>Record Hand</button>
+  </div>
+
+  <!-- ---- Scoreboard Tab ---- -->
+  <div id="tab-board" class="tab-content" style="display:none;">
+    <div class="card">
+      <table class="score-table">
+        <thead><tr><th></th><th>Player</th><th class="score-val">Score</th><th class="score-val">Wins</th></tr></thead>
+        <tbody id="scoreboard-body"></tbody>
+      </table>
+    </div>
+    <div class="mt-16">
+      <button class="btn btn-secondary" onclick="exportSummary()">📋 Copy Summary</button>
+      <button class="btn btn-secondary" onclick="undoLastHand()">↩ Undo Last Hand</button>
+      <button class="btn btn-danger" onclick="newGame()">New Game</button>
+    </div>
+  </div>
+
+  <!-- ---- History Tab ---- -->
+  <div id="tab-history" class="tab-content" style="display:none;">
+    <div class="card" id="history-card">
+      <p class="text-dim text-center" id="no-history">No hands recorded yet.</p>
+      <div id="history-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TOURNAMENT SETUP SCREEN ==================== -->
+<div id="tourney-setup-screen" class="screen">
+  <h1>🏆 Tournament Setup</h1>
+  <p class="subtitle">Add players, then assign them to tables</p>
+
+  <div class="card section">
+    <h2>Tournament Name</h2>
+    <input type="text" id="tourney-name" placeholder="Saturday Mahjong Tournament" maxlength="40">
+  </div>
+
+  <div class="card section">
+    <h2>All Players</h2>
+    <div id="tourney-player-inputs"></div>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="btn btn-secondary btn-small" onclick="addTourneyPlayerInput()">+ Add Player</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="flex-between mb-8">
+      <h2 style="margin:0">Tables</h2>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary btn-small" onclick="autoAssignPlayers()">Auto-Assign</button>
+        <button class="btn btn-secondary btn-small" onclick="addTourneyTable()">+ Table</button>
+      </div>
+    </div>
+    <div id="table-assignments"></div>
+    <p class="text-dim mt-8" id="unassigned-msg"></p>
+  </div>
+
+  <button class="btn btn-primary" onclick="startTournament()">Start Tournament</button>
+  <button class="btn btn-secondary" onclick="backToHome()">Back</button>
+
+  <div id="tourney-resume-section" style="display:none;" class="mt-16">
+    <p class="text-center text-dim mb-8">You have a saved tournament in progress.</p>
+    <button class="btn btn-gold" onclick="resumeTournament()">Resume Tournament</button>
+  </div>
+</div>
+
+<!-- ==================== TOURNAMENT GAME SCREEN ==================== -->
+<div id="tourney-game-screen" class="screen">
+  <div class="top-bar">
+    <span style="font-weight:700;">🏆 <span id="tourney-display-name">Tournament</span></span>
+    <span class="hand-count" id="tourney-round-counter">Round 1</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="t-tables" onclick="switchTourneyTab('t-tables')">Tables</button>
+    <button class="tab" data-tab="t-scores" onclick="switchTourneyTab('t-scores')">Leaderboard</button>
+    <button class="tab" data-tab="t-log" onclick="switchTourneyTab('t-log')">Log</button>
+  </div>
+
+  <!-- Tables tab -->
+  <div id="tab-t-tables" class="tab-content">
+    <div id="tourney-tables-container"></div>
+  </div>
+
+  <!-- Leaderboard tab -->
+  <div id="tab-t-scores" class="tab-content" style="display:none;">
+    <div class="card" id="tourney-leaderboard"></div>
+    <div class="mt-16">
+      <button class="btn btn-secondary" onclick="exportTourneySummary()">📋 Copy Summary</button>
+      <button class="btn btn-danger" onclick="endTournament()">End Tournament</button>
+    </div>
+  </div>
+
+  <!-- Log tab -->
+  <div id="tab-t-log" class="tab-content" style="display:none;">
+    <div class="card" id="tourney-log">
+      <p class="text-dim text-center" id="no-tourney-log">No rounds recorded yet.</p>
+      <div id="tourney-log-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ======================== STATE ========================
+let state = {
+  players: [],
+  mode: 'simple', // simple | money | bigcard
+  hands: [],
+  scores: {},
+  wins: {}
+};
+
+let ui = {
+  selectedWinner: null,
+  selectedDiscarder: null, // null = self-picked
+  wallGame: false,
+  penaltyPlayer: null,
+  penaltyAmount: 0
+};
+
+const STORAGE_KEY = 'mahjong_scorer_state';
+
+// ======================== SETUP ========================
+function init() {
+  // Check for saved game
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.players && parsed.players.length >= 3) {
+        document.getElementById('resume-section').style.display = 'block';
+      }
+    } catch(e) {}
+  }
+  // Default 4 player inputs
+  const container = document.getElementById('player-inputs');
+  container.innerHTML = '';
+  for (let i = 0; i < 4; i++) addPlayerInput();
+}
+
+function addPlayerInput() {
+  const container = document.getElementById('player-inputs');
+  const count = container.children.length;
+  if (count >= 5) return;
+
+  const row = document.createElement('div');
+  row.className = 'player-row';
+  row.innerHTML = `
+    <span class="player-num">${count + 1}</span>
+    <input type="text" placeholder="Player ${count + 1}" maxlength="20">
+    ${count >= 3 ? '<button class="remove-player" onclick="removePlayerInput(this)">✕</button>' : '<span style="width:32px"></span>'}
+  `;
+  container.appendChild(row);
+
+  if (container.children.length >= 5) {
+    document.getElementById('add-player-btn').disabled = true;
+  }
+}
+
+function removePlayerInput(btn) {
+  const row = btn.parentElement;
+  row.remove();
+  // Renumber
+  const rows = document.querySelectorAll('#player-inputs .player-row');
+  rows.forEach((r, i) => r.querySelector('.player-num').textContent = i + 1);
+  document.getElementById('add-player-btn').disabled = false;
+}
+
+function selectMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.mode-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.mode === mode);
+  });
+}
+
+function startGame() {
+  const inputs = document.querySelectorAll('#player-inputs input[type="text"]');
+  const names = [];
+  inputs.forEach((inp, i) => {
+    const name = inp.value.trim() || `Player ${i + 1}`;
+    names.push(name);
+  });
+
+  if (names.length < 3) {
+    showToast('Need at least 3 players');
+    return;
+  }
+
+  // Check for duplicate names
+  const unique = new Set(names);
+  if (unique.size !== names.length) {
+    showToast('Player names must be unique');
+    return;
+  }
+
+  state.players = names;
+  state.hands = [];
+  state.scores = {};
+  state.wins = {};
+  names.forEach(n => { state.scores[n] = 0; state.wins[n] = 0; });
+
+  saveState();
+  enterGameScreen();
+}
+
+function resumeGame() {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  state = saved;
+  enterGameScreen();
+}
+
+function enterGameScreen() {
+  showScreen('game-screen');
+  resetHandForm();
+  renderScoreboard();
+  renderHistory();
+  updateHandCounter();
+}
+
+// ======================== TABS ========================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = 'block';
+  if (tab === 'board') renderScoreboard();
+  if (tab === 'history') renderHistory();
+}
+
+// ======================== SCORE HAND ========================
+function resetHandForm() {
+  ui.selectedWinner = null;
+  ui.selectedDiscarder = null;
+  ui.wallGame = false;
+  ui.penaltyPlayer = null;
+  ui.penaltyAmount = 0;
+
+  // Build winner grid
+  const wGrid = document.getElementById('winner-grid');
+  wGrid.innerHTML = state.players.map(p =>
+    `<button class="player-btn" onclick="selectWinner('${esc(p)}')">${esc(p)}</button>`
+  ).join('') + '<button class="player-btn wall-btn" onclick="selectWallGame()">Wall Game (No Winner)</button>';
+
+  document.getElementById('hand-value-section').style.display = 'none';
+  document.getElementById('discarder-section').style.display = 'none';
+  document.getElementById('bonuses-section').style.display = 'none';
+  document.getElementById('three-exposure-section').style.display = 'none';
+  document.getElementById('penalty-section').style.display = 'none';
+  document.getElementById('penalty-amount-section').style.display = 'none';
+  document.getElementById('payment-preview').style.display = 'none';
+  document.getElementById('hand-value').value = '';
+  document.querySelectorAll('#hand-value-grid .player-btn').forEach(btn => btn.classList.remove('selected'));
+  document.getElementById('record-btn').disabled = true;
+
+  // Uncheck all bonuses
+  ['bonus-jokerless','bonus-no-expose','bonus-finesse','three-exposure'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+}
+
+function esc(s) { return s.replace(/'/g, "\\'").replace(/</g, '&lt;'); }
+function escHtml(s) { return s.replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function selectWinner(name) {
+  // Unescape
+  name = name.replace(/\\'/g, "'");
+  ui.selectedWinner = name;
+  ui.wallGame = false;
+
+  // Highlight
+  document.querySelectorAll('#winner-grid .player-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent === name);
+  });
+
+  // Reset penalty when winner changes
+  ui.penaltyPlayer = null;
+  ui.penaltyAmount = 0;
+
+  if (state.mode === 'simple') {
+    document.getElementById('hand-value-section').style.display = 'block';
+    document.getElementById('record-btn').disabled = false;
+  } else {
+    document.getElementById('hand-value-section').style.display = 'block';
+    showDiscarderSection(name);
+  }
+  showPenaltySection(name);
+  updatePaymentPreview();
+}
+
+function selectWallGame() {
+  ui.wallGame = true;
+  ui.selectedWinner = null;
+  document.querySelectorAll('#winner-grid .player-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.classList.contains('wall-btn'));
+  });
+  document.getElementById('hand-value-section').style.display = 'none';
+  document.getElementById('discarder-section').style.display = 'none';
+  document.getElementById('bonuses-section').style.display = 'none';
+  document.getElementById('three-exposure-section').style.display = 'none';
+  document.getElementById('payment-preview').style.display = 'none';
+  document.getElementById('record-btn').disabled = false;
+}
+
+function showDiscarderSection(winner) {
+  const dGrid = document.getElementById('discarder-grid');
+  const others = state.players.filter(p => p !== winner);
+  dGrid.innerHTML =
+    `<button class="player-btn selected" onclick="selectDiscarder(null)" style="grid-column:1/-1;">Self-Picked (+10 pts)</button>` +
+    others.map(p =>
+      `<button class="player-btn" onclick="selectDiscarder('${esc(p)}')">${escHtml(p)}</button>`
+    ).join('');
+  ui.selectedDiscarder = null; // default self-picked
+  document.getElementById('discarder-section').style.display = 'block';
+  document.getElementById('record-btn').disabled = false;
+
+  if (state.mode === 'bigcard') {
+    document.getElementById('bonuses-section').style.display = 'block';
+  }
+  if (state.mode === 'money' || state.mode === 'bigcard') {
+    document.getElementById('three-exposure-section').style.display = 'block';
+  }
+}
+
+function selectDiscarder(name) {
+  if (name) name = name.replace(/\\'/g, "'");
+  ui.selectedDiscarder = name;
+
+  document.querySelectorAll('#discarder-grid .player-btn').forEach(btn => {
+    if (name === null) {
+      btn.classList.toggle('selected', btn.textContent.includes('Self-Picked'));
+    } else {
+      btn.classList.toggle('selected', btn.textContent === name);
+    }
+  });
+
+  // If discarder selected, show three-exposure option
+  if (name && (state.mode === 'money' || state.mode === 'bigcard')) {
+    document.getElementById('three-exposure-section').style.display = 'block';
+  } else {
+    document.getElementById('three-exposure-section').style.display = 'none';
+    document.getElementById('three-exposure').checked = false;
+  }
+
+  updatePaymentPreview();
+}
+
+function toggleCheck(id) {
+  const el = document.getElementById(id);
+  el.checked = !el.checked;
+  updatePaymentPreview();
+}
+
+function selectHandValue(val) {
+  document.getElementById('hand-value').value = val;
+  document.querySelectorAll('#hand-value-grid .player-btn').forEach(btn => {
+    btn.classList.toggle('selected', parseInt(btn.textContent) === val);
+  });
+  updatePaymentPreview();
+}
+
+function showPenaltySection(winner) {
+  const others = state.players.filter(p => p !== winner);
+  const grid = document.getElementById('penalty-player-grid');
+  grid.innerHTML = others.map(p =>
+    `<button class="player-btn" onclick="selectPenaltyPlayer('${esc(p)}')">${escHtml(p)}</button>`
+  ).join('');
+  document.getElementById('penalty-section').style.display = 'block';
+  document.getElementById('penalty-amount-section').style.display = 'none';
+}
+
+function selectPenaltyPlayer(name) {
+  name = name.replace(/\\'/g, "'");
+  // Toggle off if same player tapped again
+  if (ui.penaltyPlayer === name) {
+    ui.penaltyPlayer = null;
+    ui.penaltyAmount = 0;
+    document.querySelectorAll('#penalty-player-grid .player-btn').forEach(btn => btn.classList.remove('selected'));
+    document.getElementById('penalty-amount-section').style.display = 'none';
+    document.querySelectorAll('#penalty-amount-grid .player-btn').forEach(btn => btn.classList.remove('selected'));
+    updatePaymentPreview();
+    return;
+  }
+  ui.penaltyPlayer = name;
+  ui.penaltyAmount = 0;
+  document.querySelectorAll('#penalty-player-grid .player-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent === name);
+  });
+  document.getElementById('penalty-amount-section').style.display = 'block';
+  document.querySelectorAll('#penalty-amount-grid .player-btn').forEach(btn => btn.classList.remove('selected'));
+  updatePaymentPreview();
+}
+
+function selectPenaltyAmount(val) {
+  // Toggle off if same amount tapped again
+  if (ui.penaltyAmount === val) {
+    ui.penaltyAmount = 0;
+    document.querySelectorAll('#penalty-amount-grid .player-btn').forEach(btn => btn.classList.remove('selected'));
+    updatePaymentPreview();
+    return;
+  }
+  ui.penaltyAmount = val;
+  document.querySelectorAll('#penalty-amount-grid .player-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent === `−${val}`);
+  });
+  updatePaymentPreview();
+}
+
+function updatePaymentPreview() {
+  if (ui.wallGame || !ui.selectedWinner) {
+    document.getElementById('payment-preview').style.display = 'none';
+    return;
+  }
+
+  // For simple mode, only show preview if there's a penalty
+  if (state.mode === 'simple') {
+    if (!ui.penaltyPlayer || !ui.penaltyAmount) {
+      document.getElementById('payment-preview').style.display = 'none';
+      return;
+    }
+    const lines = document.getElementById('payment-lines');
+    lines.innerHTML = `<div class="payment-line">
+      <span>${escHtml(ui.penaltyPlayer)} (penalty)</span>
+      <span class="pay-amount score-negative">−${ui.penaltyAmount}</span>
+    </div>`;
+    document.getElementById('payment-preview').style.display = 'block';
+    return;
+  }
+
+  const payments = calculatePayments();
+  if (!payments) {
+    document.getElementById('payment-preview').style.display = 'none';
+    return;
+  }
+
+  // Apply penalty to preview
+  if (ui.penaltyPlayer && ui.penaltyAmount) {
+    payments[ui.penaltyPlayer] = (payments[ui.penaltyPlayer] || 0) - ui.penaltyAmount;
+  }
+
+  const lines = document.getElementById('payment-lines');
+  lines.innerHTML = '';
+  for (const [player, amount] of Object.entries(payments)) {
+    const div = document.createElement('div');
+    div.className = 'payment-line';
+    const sign = amount > 0 ? '+' : '';
+    const cls = amount > 0 ? 'score-positive' : amount < 0 ? 'score-negative' : '';
+    const penaltyNote = (ui.penaltyPlayer === player && ui.penaltyAmount) ? ' (incl. penalty)' : '';
+    div.innerHTML = `<span>${escHtml(player)}${penaltyNote}</span><span class="pay-amount ${cls}">${sign}${amount}</span>`;
+    lines.appendChild(div);
+  }
+  document.getElementById('payment-preview').style.display = 'block';
+}
+
+function calculatePayments() {
+  const value = parseInt(document.getElementById('hand-value').value) || 0;
+  if (value <= 0 || !ui.selectedWinner) return null;
+
+  const winner = ui.selectedWinner;
+  const discarder = ui.selectedDiscarder;
+  const selfPicked = discarder === null;
+  const jokerless = document.getElementById('bonus-jokerless').checked;
+  const threeExposure = document.getElementById('three-exposure').checked;
+  const noExpose = document.getElementById('bonus-no-expose')?.checked || false;
+  const finesse = document.getElementById('bonus-finesse')?.checked || false;
+
+  let handTotal = value;
+
+  // Big Card bonuses add to point total
+  if (state.mode === 'bigcard') {
+    if (selfPicked) handTotal += 10;
+    if (jokerless) handTotal += 20;
+    if (noExpose) handTotal += 10;
+    if (finesse) handTotal += 10;
+  }
+
+  const payments = {};
+  state.players.forEach(p => payments[p] = 0);
+
+  if (selfPicked) {
+    // Self-picked: all others pay 2×
+    const payMultiplier = jokerless ? 4 : 2;
+    state.players.forEach(p => {
+      if (p !== winner) {
+        payments[p] = -(handTotal * payMultiplier);
+        payments[winner] += handTotal * payMultiplier;
+      }
+    });
+  } else if (threeExposure && discarder) {
+    // 3 exposures: discarder pays for everyone
+    const othersCount = state.players.length - 1;
+    const perPerson = jokerless ? handTotal * 2 : handTotal;
+    const discarderPay = jokerless ? handTotal * 4 : handTotal * 2;
+    const totalFromDiscarder = discarderPay + (perPerson * (othersCount - 1));
+    payments[discarder] = -totalFromDiscarder;
+    payments[winner] = totalFromDiscarder;
+  } else {
+    // Normal discard
+    const discarderPay = jokerless ? handTotal * 4 : handTotal * 2;
+    const otherPay = jokerless ? handTotal * 2 : handTotal;
+
+    payments[discarder] = -discarderPay;
+    payments[winner] += discarderPay;
+
+    state.players.forEach(p => {
+      if (p !== winner && p !== discarder) {
+        payments[p] = -otherPay;
+        payments[winner] += otherPay;
+      }
+    });
+  }
+
+  return payments;
+}
+
+function recordHand() {
+  if (ui.wallGame) {
+    state.players.forEach(p => { state.scores[p] += 10; });
+    const hand = { type: 'wall', num: state.hands.length + 1 };
+    state.hands.push(hand);
+    saveState();
+    resetHandForm();
+    updateHandCounter();
+    showToast('Wall game — +10 to all');
+    return;
+  }
+
+  if (!ui.selectedWinner) return;
+
+  const value = parseInt(document.getElementById('hand-value').value) || 0;
+
+  // Capture penalty before recording
+  const penaltyPlayer = ui.penaltyPlayer;
+  const penaltyAmount = ui.penaltyAmount;
+
+  if (state.mode === 'simple') {
+    state.scores[ui.selectedWinner] += value;
+    state.wins[ui.selectedWinner]++;
+    if (penaltyPlayer && penaltyAmount) {
+      state.scores[penaltyPlayer] -= penaltyAmount;
+    }
+    state.hands.push({
+      type: 'win', num: state.hands.length + 1,
+      winner: ui.selectedWinner, value: value, mode: 'simple',
+      penaltyPlayer: penaltyPlayer || null,
+      penaltyAmount: penaltyAmount || 0
+    });
+  } else {
+    const payments = calculatePayments();
+    if (!payments) {
+      showToast('Enter a hand value');
+      return;
+    }
+    for (const [player, amount] of Object.entries(payments)) {
+      state.scores[player] += amount;
+    }
+    state.wins[ui.selectedWinner]++;
+    if (penaltyPlayer && penaltyAmount) {
+      state.scores[penaltyPlayer] -= penaltyAmount;
+    }
+
+    state.hands.push({
+      type: 'win', num: state.hands.length + 1,
+      winner: ui.selectedWinner, value: value, mode: state.mode,
+      discarder: ui.selectedDiscarder,
+      selfPicked: ui.selectedDiscarder === null,
+      jokerless: document.getElementById('bonus-jokerless').checked,
+      threeExposure: document.getElementById('three-exposure').checked,
+      noExpose: document.getElementById('bonus-no-expose')?.checked || false,
+      finesse: document.getElementById('bonus-finesse')?.checked || false,
+      payments: payments,
+      penaltyPlayer: penaltyPlayer || null,
+      penaltyAmount: penaltyAmount || 0
+    });
+  }
+
+  saveState();
+  resetHandForm();
+  updateHandCounter();
+  showToast(`Hand recorded!`);
+}
+
+// ======================== SCOREBOARD ========================
+function renderScoreboard() {
+  const sorted = [...state.players].sort((a, b) => state.scores[b] - state.scores[a]);
+  const tbody = document.getElementById('scoreboard-body');
+  tbody.innerHTML = sorted.map((p, i) => {
+    const score = state.scores[p];
+    const cls = score > 0 ? 'score-positive' : score < 0 ? 'score-negative' : '';
+    const sign = score > 0 ? '+' : '';
+    return `<tr>
+      <td class="rank ${i === 0 ? 'rank-1' : ''}">${i === 0 ? '👑' : i + 1}</td>
+      <td>${escHtml(p)}</td>
+      <td class="score-val ${cls}">${sign}${score}</td>
+      <td class="score-val">${state.wins[p]}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ======================== HISTORY ========================
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const noH = document.getElementById('no-history');
+
+  if (state.hands.length === 0) {
+    noH.style.display = 'block';
+    list.innerHTML = '';
+    return;
+  }
+  noH.style.display = 'none';
+
+  list.innerHTML = [...state.hands].reverse().map(h => {
+    if (h.type === 'wall') {
+      return `<div class="hand-item"><span class="hand-num">Hand ${h.num}</span><div class="hand-detail">Wall Game — +10 to all</div></div>`;
+    }
+    let detail = `<strong>${escHtml(h.winner)}</strong> won (${h.value} pts)`;
+    if (h.selfPicked) detail += ' · Self-picked';
+    if (h.discarder) detail += ` · Discarded by ${escHtml(h.discarder)}`;
+
+    let badges = [];
+    if (h.jokerless) badges.push('Jokerless');
+    if (h.noExpose) badges.push('No Exposures');
+    if (h.finesse) badges.push('Finesse');
+    if (h.threeExposure) badges.push('3-Exposure');
+    if (h.penaltyPlayer && h.penaltyAmount) badges.push(`Penalty: ${h.penaltyPlayer} −${h.penaltyAmount}`);
+    const badgeStr = badges.length ? ' · ' + badges.join(', ') : '';
+
+    let paymentStr = '';
+    if (h.payments) {
+      paymentStr = Object.entries(h.payments)
+        .filter(([,v]) => v !== 0)
+        .map(([p,v]) => `${p}: ${v > 0 ? '+' : ''}${v}`)
+        .join(' | ');
+      paymentStr = `<div class="hand-payments">${paymentStr}</div>`;
+    }
+
+    return `<div class="hand-item">
+      <span class="hand-num">Hand ${h.num}</span>
+      <div class="hand-detail">${detail}${badgeStr}</div>
+      ${paymentStr}
+    </div>`;
+  }).join('');
+}
+
+// ======================== ACTIONS ========================
+function undoLastHand() {
+  if (state.hands.length === 0) {
+    showToast('Nothing to undo');
+    return;
+  }
+  const last = state.hands.pop();
+  if (last.type === 'wall') {
+    state.players.forEach(p => { state.scores[p] -= 10; });
+  } else if (last.type === 'win') {
+    if (last.payments) {
+      for (const [player, amount] of Object.entries(last.payments)) {
+        state.scores[player] -= amount;
+      }
+    } else {
+      state.scores[last.winner] -= last.value;
+    }
+    state.wins[last.winner]--;
+    if (last.penaltyPlayer && last.penaltyAmount) {
+      state.scores[last.penaltyPlayer] += last.penaltyAmount;
+    }
+  }
+  saveState();
+  renderScoreboard();
+  renderHistory();
+  updateHandCounter();
+  showToast('Last hand undone');
+}
+
+function newGame() {
+  if (!confirm('Start a new game? This will clear all scores.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function exportSummary() {
+  const sorted = [...state.players].sort((a, b) => state.scores[b] - state.scores[a]);
+  let lines = [`🀄 Mahjong Game Summary`, `Mode: ${state.mode}`, `Hands played: ${state.hands.length}`, ''];
+  lines.push('Final Scores:');
+  sorted.forEach((p, i) => {
+    const s = state.scores[p];
+    const sign = s > 0 ? '+' : '';
+    lines.push(`  ${i + 1}. ${p}: ${sign}${s} (${state.wins[p]} wins)`);
+  });
+  lines.push('');
+  lines.push('Hand Log:');
+  state.hands.forEach(h => {
+    if (h.type === 'wall') {
+      lines.push(`  #${h.num}: Wall Game`);
+    } else {
+      let detail = `#${h.num}: ${h.winner} won (${h.value} pts)`;
+      if (h.selfPicked) detail += ' [Self-picked]';
+      if (h.discarder) detail += ` [Disc: ${h.discarder}]`;
+      if (h.jokerless) detail += ' [Jokerless]';
+      if (h.threeExposure) detail += ' [3-Exp]';
+      lines.push(`  ${detail}`);
+    }
+  });
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Summary copied to clipboard!');
+  }).catch(() => {
+    // Fallback for file:// protocol
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Summary copied!');
+  });
+}
+
+// ======================== HELPERS ========================
+function updateHandCounter() {
+  document.getElementById('hand-counter').textContent = `Hand ${state.hands.length + 1}`;
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ======================== TOURNAMENT ========================
+const TOURNEY_STORAGE_KEY = 'mahjong_tournament_state';
+
+let tourney = {
+  name: '',
+  players: [],
+  tables: [],    // [{id, name, players:[], rounds:[], currentPick:null}]
+  unseated: [],  // players not at any table
+  log: [],       // [{round, tableId, tableName, winner, value, penaltyPlayer, penaltyAmount, timestamp}]
+  scores: {},    // player -> total points
+  wins: {},      // player -> win count
+};
+
+// Per-table UI state (not persisted)
+let tableUI = {};  // tableIndex -> {selectedWinner, selectedValue, penaltyPlayer, penaltyAmount, wallGame}
+
+let tourneySetup = {
+  players: [],
+  tables: [],    // [{id, name, players:[]}]
+};
+
+function showTourneySetup() {
+  // Check for saved tournament
+  const saved = localStorage.getItem(TOURNEY_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.tables && parsed.tables.length > 0) {
+        document.getElementById('tourney-resume-section').style.display = 'block';
+      }
+    } catch(e) {}
+  }
+
+  showScreen('tourney-setup-screen');
+  tourneySetup = { players: [], tables: [] };
+
+  // Default 8 player inputs
+  const container = document.getElementById('tourney-player-inputs');
+  container.innerHTML = '';
+  for (let i = 0; i < 8; i++) addTourneyPlayerInput();
+
+  // Default 2 tables
+  const ta = document.getElementById('table-assignments');
+  ta.innerHTML = '';
+  addTourneyTable();
+  addTourneyTable();
+}
+
+function addTourneyPlayerInput() {
+  const container = document.getElementById('tourney-player-inputs');
+  const count = container.children.length;
+  if (count >= 20) return;
+
+  const row = document.createElement('div');
+  row.className = 'player-row';
+  row.innerHTML = `
+    <span class="player-num">${count + 1}</span>
+    <input type="text" placeholder="Player ${count + 1}" maxlength="20">
+    ${count >= 4 ? '<button class="remove-player" onclick="removeTourneyPlayerInput(this)">✕</button>' : '<span style="width:32px"></span>'}
+  `;
+  container.appendChild(row);
+}
+
+function removeTourneyPlayerInput(btn) {
+  btn.parentElement.remove();
+  const rows = document.querySelectorAll('#tourney-player-inputs .player-row');
+  rows.forEach((r, i) => r.querySelector('.player-num').textContent = i + 1);
+}
+
+let tourneyTableCounter = 0;
+
+function addTourneyTable() {
+  tourneyTableCounter++;
+  const id = 'table-' + tourneyTableCounter;
+  const container = document.getElementById('table-assignments');
+
+  const card = document.createElement('div');
+  card.className = 'table-setup-card';
+  card.id = id;
+  card.innerHTML = `
+    <div class="table-setup-header">
+      <span class="table-setup-title">Table ${tourneyTableCounter}</span>
+      <button class="remove-player" onclick="removeTourneyTable('${id}')">✕</button>
+    </div>
+    <div class="assigned-players" data-table-id="${id}"></div>
+    <button class="btn btn-secondary btn-small mt-8" onclick="showPlayerPickerModal('${id}')">+ Add Player</button>
+  `;
+  container.appendChild(card);
+  updateAssignmentUI();
+}
+
+function removeTourneyTable(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  updateAssignmentUI();
+}
+
+function updateAssignmentUI() {
+  // Collect all player names
+  const inputs = document.querySelectorAll('#tourney-player-inputs input[type="text"]');
+  const allPlayers = [];
+  inputs.forEach((inp, i) => {
+    const name = inp.value.trim() || `Player ${i + 1}`;
+    allPlayers.push(name);
+  });
+
+  // Collect already-assigned players across all tables
+  const assigned = new Set();
+  document.querySelectorAll('.table-setup-card').forEach(card => {
+    const container = card.querySelector('.assigned-players');
+    container.querySelectorAll('.assigned-chip').forEach(chip => {
+      assigned.add(chip.dataset.player);
+    });
+  });
+
+  // Update unassigned message
+  const unassignedCount = allPlayers.filter(p => !assigned.has(p)).length;
+  document.getElementById('unassigned-msg').textContent =
+    unassignedCount > 0 ? `${unassignedCount} player(s) not assigned to a table` : 'All players assigned!';
+}
+
+// Use event delegation for table player assignment
+document.addEventListener('click', function(e) {
+  // Handle clicking assigned chips to remove
+  if (e.target.classList.contains('remove-assigned')) {
+    const chip = e.target.closest('.assigned-chip');
+    if (chip) {
+      chip.remove();
+      updateAssignmentUI();
+    }
+  }
+});
+
+function getTourneyPlayers() {
+  const inputs = document.querySelectorAll('#tourney-player-inputs input[type="text"]');
+  const names = [];
+  inputs.forEach((inp, i) => {
+    const name = inp.value.trim() || `Player ${i + 1}`;
+    names.push(name);
+  });
+  return [...new Set(names)]; // deduplicate
+}
+
+function getTableAssignments() {
+  const tables = [];
+  let tableNum = 0;
+  document.querySelectorAll('.table-setup-card').forEach(card => {
+    tableNum++;
+    const players = [];
+    card.querySelectorAll('.assigned-chip').forEach(chip => {
+      players.push(chip.dataset.player);
+    });
+    tables.push({ id: card.id, name: `Table ${tableNum}`, players });
+  });
+  return tables;
+}
+
+function assignPlayerToTable(tableId, playerName) {
+  const card = document.getElementById(tableId);
+  if (!card) return;
+  const container = card.querySelector('.assigned-players');
+
+  // Check if already assigned to this table
+  const existing = container.querySelectorAll('.assigned-chip');
+  for (const chip of existing) {
+    if (chip.dataset.player === playerName) return;
+  }
+
+  // Check table size limit (4 max)
+  if (existing.length >= 4) {
+    showToast('Max 4 players per table');
+    return;
+  }
+
+  // Check if assigned elsewhere — remove from other table first
+  document.querySelectorAll('.assigned-chip').forEach(chip => {
+    if (chip.dataset.player === playerName) chip.remove();
+  });
+
+  const chip = document.createElement('div');
+  chip.className = 'assigned-chip';
+  chip.dataset.player = playerName;
+  chip.innerHTML = `${escHtml(playerName)} <span class="remove-assigned">✕</span>`;
+  container.appendChild(chip);
+
+  updateAssignmentUI();
+}
+
+function startTournament() {
+  const allPlayers = getTourneyPlayers();
+  if (allPlayers.length < 4) {
+    showToast('Need at least 4 players');
+    return;
+  }
+
+  const tables = getTableAssignments();
+
+  // Validate tables
+  for (const t of tables) {
+    if (t.players.length < 2) {
+      showToast(`${t.name} needs at least 2 players`);
+      return;
+    }
+  }
+
+  const assignedPlayers = tables.flatMap(t => t.players);
+  if (assignedPlayers.length === 0) {
+    showToast('Assign players to tables first');
+    return;
+  }
+
+  const tourneyName = document.getElementById('tourney-name').value.trim() || 'Mahjong Tournament';
+
+  tourney = {
+    name: tourneyName,
+    players: [...new Set(assignedPlayers)],
+    tables: tables.map(t => ({
+      id: t.id,
+      name: t.name,
+      players: t.players,
+      rounds: [],
+      currentPick: null,
+    })),
+    unseated: [],
+    log: [],
+    scores: {},
+    wins: {},
+  };
+  tourney.players.forEach(p => { tourney.scores[p] = 0; tourney.wins[p] = 0; });
+
+  saveTourneyState();
+  enterTourneyGame();
+}
+
+function resumeTournament() {
+  const saved = JSON.parse(localStorage.getItem(TOURNEY_STORAGE_KEY));
+  tourney = saved;
+  if (!tourney.unseated) tourney.unseated = [];
+  if (!tourney.wins) {
+    tourney.wins = {};
+    tourney.players.forEach(p => { tourney.wins[p] = tourney.scores[p] || 0; });
+  }
+  enterTourneyGame();
+}
+
+function enterTourneyGame() {
+  showScreen('tourney-game-screen');
+  document.getElementById('tourney-display-name').textContent = tourney.name;
+  // Initialize per-table UI state
+  tableUI = {};
+  tourney.tables.forEach((_, i) => resetTableUI(i));
+  renderTourneyTables();
+  renderTourneyLeaderboard();
+  renderTourneyLog();
+  updateTourneyRoundCounter();
+}
+
+function resetTableUI(ti) {
+  tableUI[ti] = { selectedWinner: null, selectedValue: null, penaltyPlayer: null, penaltyAmount: 0, wallGame: false };
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function backToHome() {
+  showScreen('setup-screen');
+}
+
+function switchTourneyTab(tab) {
+  document.querySelectorAll('#tourney-game-screen .tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === tab)
+  );
+  document.querySelectorAll('#tourney-game-screen .tab-content').forEach(tc => tc.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = 'block';
+  if (tab === 't-scores') renderTourneyLeaderboard();
+  if (tab === 't-log') renderTourneyLog();
+}
+
+function renderTourneyTables() {
+  const container = document.getElementById('tourney-tables-container');
+
+  // Ensure unseated array exists (backward compat with saved state)
+  if (!tourney.unseated) tourney.unseated = [];
+
+  // Render unseated section if there are unseated players
+  let unseatedHtml = '';
+  if (tourney.unseated.length > 0) {
+    const chips = tourney.unseated.map(p =>
+      `<span class="unseated-chip" onclick="selectUnseatedPlayer('${esc(p)}')">${escHtml(p)}</span>`
+    ).join('');
+    unseatedHtml = `<div class="unseated-section">
+      <div class="unseated-header">
+        <span class="unseated-title">Unseated Players (${tourney.unseated.length})</span>
+        <button class="btn btn-secondary btn-small" onclick="assignAllUnseated()">Assign All</button>
+      </div>
+      <div class="unseated-chips">${chips}</div>
+      <div id="unseated-dest"></div>
+    </div>`;
+  }
+
+  const tablesHtml = tourney.tables.map((table, ti) => {
+    if (!tableUI[ti]) resetTableUI(ti);
+    const tui = tableUI[ti];
+    const roundNum = table.rounds.length + 1;
+
+    // Who won? — player chips + Wall Game
+    const playersHtml = table.players.map(p => {
+      const wins = table.rounds.filter(r => r.winner === p).length;
+      const isSelected = tui.selectedWinner === p;
+      return `<div class="table-player-chip ${isSelected ? 'winner-pick' : ''}"
+                   onclick="selectTableWinner(${ti}, '${esc(p)}')">
+        ${escHtml(p)}${wins > 0 ? `<span class="chip-wins">(${wins})</span>` : ''}
+      </div>`;
+    }).join('');
+    const wallSelected = tui.wallGame;
+    const wallChip = `<div class="table-player-chip ${wallSelected ? 'winner-pick' : ''}"
+                          onclick="selectTableWall(${ti})" style="width:100%;text-align:center;">
+      Wall Game (No Winner)
+    </div>`;
+
+    // Hand Value section (shown when winner selected)
+    let handValueHtml = '';
+    if (tui.selectedWinner) {
+      const values = [25, 30, 40, 45, 50, 75, 85];
+      const valBtns = values.map(v =>
+        `<button class="player-btn ${tui.selectedValue === v ? 'selected' : ''}" onclick="selectTableValue(${ti}, ${v})">${v}</button>`
+      ).join('');
+      handValueHtml = `<div class="card" style="margin-top:10px;padding:12px;">
+        <h2 style="font-size:1rem;margin-bottom:8px;">Hand Value</h2>
+        <div class="player-select-grid" style="grid-template-columns: repeat(4, 1fr);">${valBtns}</div>
+      </div>`;
+    }
+
+    // Penalty section (shown when winner selected)
+    let penaltyHtml = '';
+    if (tui.selectedWinner) {
+      const others = table.players.filter(p => p !== tui.selectedWinner);
+      const penaltyBtns = others.map(p =>
+        `<button class="player-btn ${tui.penaltyPlayer === p ? 'selected' : ''}" onclick="selectTablePenaltyPlayer(${ti}, '${esc(p)}')">${escHtml(p)}</button>`
+      ).join('');
+      let penaltyAmountHtml = '';
+      if (tui.penaltyPlayer) {
+        const amounts = [10, 20, 25];
+        penaltyAmountHtml = `<div style="margin-top:8px;">
+          <p style="font-size:0.85rem;margin-bottom:6px;color:var(--text-dim);">Penalty amount:</p>
+          <div class="player-select-grid" style="grid-template-columns: repeat(3, 1fr);">
+            ${amounts.map(a => `<button class="player-btn ${tui.penaltyAmount === a ? 'selected' : ''}" onclick="selectTablePenaltyAmount(${ti}, ${a})">−${a}</button>`).join('')}
+          </div>
+        </div>`;
+      }
+      penaltyHtml = `<div class="card" style="margin-top:10px;padding:12px;">
+        <h2 style="font-size:1rem;margin-bottom:4px;">Penalty <span style="font-weight:400;font-size:0.8rem;color:var(--text-dim);">(optional)</span></h2>
+        <p class="text-dim" style="font-size:0.8rem;margin-bottom:8px;">Tap a player to assign a penalty, tap again to remove</p>
+        <div class="player-select-grid">${penaltyBtns}</div>
+        ${penaltyAmountHtml}
+      </div>`;
+    }
+
+    // Payment preview (penalty only, same as simple mode)
+    let previewHtml = '';
+    if (tui.penaltyPlayer && tui.penaltyAmount) {
+      previewHtml = `<div class="card" style="margin-top:10px;padding:12px;">
+        <h2 style="font-size:1rem;margin-bottom:8px;">Payment Preview</h2>
+        <div class="payment-line">
+          <span>${escHtml(tui.penaltyPlayer)} (penalty)</span>
+          <span class="pay-amount score-negative">−${tui.penaltyAmount}</span>
+        </div>
+      </div>`;
+    }
+
+    // Record button state
+    const canRecord = tui.wallGame || tui.selectedWinner;
+
+    return `<div class="table-card ${tui.selectedWinner || tui.wallGame ? 'recording' : ''}" id="tourney-table-${ti}">
+      <div class="table-header">
+        <span class="table-title">${escHtml(table.name)}</span>
+        <span class="table-round">Round ${roundNum}</span>
+      </div>
+      <div class="table-players">${playersHtml}${wallChip}</div>
+      ${handValueHtml}
+      ${penaltyHtml}
+      ${previewHtml}
+      <div class="table-actions" style="margin-top:10px;">
+        <button class="btn btn-primary btn-small" onclick="recordTableHand(${ti})" ${!canRecord ? 'disabled' : ''}>
+          Record Hand
+        </button>
+        ${table.players.length > 0 ? `<button class="btn btn-secondary btn-small" onclick="toggleDropPanel(${ti})" style="flex:0 0 auto;padding:8px 10px;">Move Players</button>` : ''}
+      </div>
+      <div id="drop-panel-${ti}"></div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = unseatedHtml + tablesHtml;
+}
+
+function selectTableWinner(ti, playerName) {
+  playerName = playerName.replace(/\\'/g, "'");
+  if (!tableUI[ti]) resetTableUI(ti);
+  const tui = tableUI[ti];
+  // Toggle off if same player
+  if (tui.selectedWinner === playerName) {
+    resetTableUI(ti);
+  } else {
+    tui.selectedWinner = playerName;
+    tui.wallGame = false;
+    tui.penaltyPlayer = null;
+    tui.penaltyAmount = 0;
+  }
+  renderTourneyTables();
+}
+
+function selectTableWall(ti) {
+  if (!tableUI[ti]) resetTableUI(ti);
+  const tui = tableUI[ti];
+  if (tui.wallGame) {
+    resetTableUI(ti);
+  } else {
+    tableUI[ti] = { selectedWinner: null, selectedValue: null, penaltyPlayer: null, penaltyAmount: 0, wallGame: true };
+  }
+  renderTourneyTables();
+}
+
+function selectTableValue(ti, val) {
+  if (!tableUI[ti]) return;
+  const tui = tableUI[ti];
+  tui.selectedValue = tui.selectedValue === val ? null : val;
+  renderTourneyTables();
+}
+
+function selectTablePenaltyPlayer(ti, playerName) {
+  playerName = playerName.replace(/\\'/g, "'");
+  if (!tableUI[ti]) return;
+  const tui = tableUI[ti];
+  if (tui.penaltyPlayer === playerName) {
+    tui.penaltyPlayer = null;
+    tui.penaltyAmount = 0;
+  } else {
+    tui.penaltyPlayer = playerName;
+    tui.penaltyAmount = 0;
+  }
+  renderTourneyTables();
+}
+
+function selectTablePenaltyAmount(ti, val) {
+  if (!tableUI[ti]) return;
+  const tui = tableUI[ti];
+  tui.penaltyAmount = tui.penaltyAmount === val ? 0 : val;
+  renderTourneyTables();
+}
+
+// ======================== DROP / UNSEAT / ASSIGN PLAYERS ========================
+
+function toggleDropPanel(tableIndex) {
+  const panel = document.getElementById(`drop-panel-${tableIndex}`);
+  // If already open, close it
+  if (panel.innerHTML) {
+    panel.innerHTML = '';
+    return;
+  }
+  // Close any other open panels
+  tourney.tables.forEach((_, i) => {
+    const p = document.getElementById(`drop-panel-${i}`);
+    if (p) p.innerHTML = '';
+  });
+
+  const table = tourney.tables[tableIndex];
+  const playerChips = table.players.map(p =>
+    `<span class="drop-chip" onclick="dropPlayer(${tableIndex}, '${esc(p)}')">${escHtml(p)}</span>`
+  ).join('');
+
+  panel.innerHTML = `<div class="drop-panel">
+    <div class="drop-panel-title">Tap a player to unseat them:</div>
+    <div class="drop-chips">${playerChips}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span class="drop-chip" onclick="dropAllPlayers(${tableIndex})" style="background:var(--accent);color:#fff;">Drop All</span>
+      <span class="drop-chip" onclick="closeDropPanel(${tableIndex})" style="background:transparent;color:var(--text-dim);border:1px solid #445;">Cancel</span>
+    </div>
+  </div>`;
+}
+
+function closeDropPanel(tableIndex) {
+  const panel = document.getElementById(`drop-panel-${tableIndex}`);
+  if (panel) panel.innerHTML = '';
+}
+
+function dropPlayer(tableIndex, playerName) {
+  playerName = playerName.replace(/\\'/g, "'");
+  const table = tourney.tables[tableIndex];
+
+  // Remove from table
+  table.players = table.players.filter(p => p !== playerName);
+  if (table.currentPick === playerName) table.currentPick = null;
+
+  // Add to unseated
+  if (!tourney.unseated) tourney.unseated = [];
+  if (!tourney.unseated.includes(playerName)) {
+    tourney.unseated.push(playerName);
+  }
+
+  saveTourneyState();
+  renderTourneyTables();
+  showToast(`${playerName} is now unseated`);
+}
+
+function dropAllPlayers(tableIndex) {
+  const table = tourney.tables[tableIndex];
+  if (!tourney.unseated) tourney.unseated = [];
+
+  table.players.forEach(p => {
+    if (!tourney.unseated.includes(p)) {
+      tourney.unseated.push(p);
+    }
+  });
+  table.players = [];
+  table.currentPick = null;
+
+  saveTourneyState();
+  renderTourneyTables();
+  showToast(`All players unseated from ${table.name}`);
+}
+
+// Unseated player selection for manual assignment
+let selectedUnseated = null;
+
+function selectUnseatedPlayer(playerName) {
+  playerName = playerName.replace(/\\'/g, "'");
+
+  // Toggle selection
+  if (selectedUnseated === playerName) {
+    selectedUnseated = null;
+    renderTourneyTables();
+    return;
+  }
+  selectedUnseated = playerName;
+
+  // Highlight selected chip
+  document.querySelectorAll('.unseated-chip').forEach(chip => {
+    chip.classList.toggle('selected', chip.textContent.trim() === playerName);
+  });
+
+  // Show destination tables
+  const destContainer = document.getElementById('unseated-dest');
+  const destinations = tourney.tables
+    .filter(t => t.players.length < 4);
+
+  if (destinations.length === 0) {
+    destContainer.innerHTML = '<div style="margin-top:8px;color:var(--accent);font-size:0.85rem;">All tables are full (4 players)</div>';
+    return;
+  }
+
+  destContainer.innerHTML = `<div style="font-size:0.85rem;color:var(--text-dim);margin-top:8px;margin-bottom:6px;">Assign to:</div>
+    <div class="unseated-dest">${destinations.map((t, i) => {
+      const ti = tourney.tables.indexOf(t);
+      return `<span class="move-dest-btn" onclick="seatPlayer('${esc(playerName)}', ${ti})">${escHtml(t.name)} (${t.players.length}/4)</span>`;
+    }).join('')}</div>`;
+}
+
+function seatPlayer(playerName, tableIndex) {
+  playerName = playerName.replace(/\\'/g, "'");
+  const table = tourney.tables[tableIndex];
+
+  if (table.players.length >= 4) {
+    showToast(`${table.name} is full`);
+    return;
+  }
+
+  // Remove from unseated
+  tourney.unseated = tourney.unseated.filter(p => p !== playerName);
+  // Add to table
+  table.players.push(playerName);
+
+  selectedUnseated = null;
+  saveTourneyState();
+  renderTourneyTables();
+  showToast(`${playerName} seated at ${table.name}`);
+}
+
+function assignAllUnseated() {
+  if (!tourney.unseated || tourney.unseated.length === 0) return;
+
+  // Shuffle the unseated list
+  const shuffled = [...tourney.unseated];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Find tables with open spots, sorted by fewest players first
+  let placed = 0;
+  for (const player of shuffled) {
+    // Re-sort each time since counts change
+    const openTables = tourney.tables
+      .filter(t => t.players.length < 4)
+      .sort((a, b) => a.players.length - b.players.length);
+
+    if (openTables.length === 0) break;
+
+    openTables[0].players.push(player);
+    tourney.unseated = tourney.unseated.filter(p => p !== player);
+    placed++;
+  }
+
+  selectedUnseated = null;
+  saveTourneyState();
+  renderTourneyTables();
+
+  if (tourney.unseated.length > 0) {
+    showToast(`Seated ${placed} players. ${tourney.unseated.length} still unseated (tables full).`);
+  } else {
+    showToast(`All ${placed} players assigned!`);
+  }
+}
+
+function recordTableHand(ti) {
+  if (!tableUI[ti]) return;
+  const tui = tableUI[ti];
+  const table = tourney.tables[ti];
+
+  if (tui.wallGame) {
+    // Wall game: +10 to all at this table
+    table.players.forEach(p => { tourney.scores[p] = (tourney.scores[p] || 0) + 10; });
+    table.rounds.push({ winner: null, value: 0, timestamp: Date.now() });
+    tourney.log.push({
+      round: table.rounds.length, tableId: table.id, tableName: table.name,
+      winner: null, value: 0, timestamp: Date.now(),
+    });
+    resetTableUI(ti);
+    saveTourneyState();
+    renderTourneyTables();
+    updateTourneyRoundCounter();
+    showToast(`Wall game at ${table.name} — +10 to all`);
+    return;
+  }
+
+  if (!tui.selectedWinner) return;
+
+  const winner = tui.selectedWinner;
+  const value = tui.selectedValue || 0;
+
+  // Apply hand value to winner
+  tourney.scores[winner] = (tourney.scores[winner] || 0) + value;
+  tourney.wins[winner] = (tourney.wins[winner] || 0) + 1;
+
+  // Apply penalty
+  if (tui.penaltyPlayer && tui.penaltyAmount) {
+    tourney.scores[tui.penaltyPlayer] = (tourney.scores[tui.penaltyPlayer] || 0) - tui.penaltyAmount;
+  }
+
+  table.rounds.push({
+    winner, value,
+    penaltyPlayer: tui.penaltyPlayer || null,
+    penaltyAmount: tui.penaltyAmount || 0,
+    timestamp: Date.now(),
+  });
+  tourney.log.push({
+    round: table.rounds.length, tableId: table.id, tableName: table.name,
+    winner, value,
+    penaltyPlayer: tui.penaltyPlayer || null,
+    penaltyAmount: tui.penaltyAmount || 0,
+    timestamp: Date.now(),
+  });
+
+  resetTableUI(ti);
+  saveTourneyState();
+  renderTourneyTables();
+  updateTourneyRoundCounter();
+  showToast(`${winner} wins ${value}pts at ${table.name}!`);
+}
+
+function updateTourneyRoundCounter() {
+  const totalRounds = tourney.tables.reduce((sum, t) => sum + t.rounds.length, 0);
+  document.getElementById('tourney-round-counter').textContent = `${totalRounds} rounds played`;
+}
+
+function renderTourneyLeaderboard() {
+  if (!tourney.wins) tourney.wins = {};
+  const sorted = [...tourney.players].sort((a, b) => (tourney.scores[b] || 0) - (tourney.scores[a] || 0));
+  const container = document.getElementById('tourney-leaderboard');
+  container.innerHTML = `<div style="display:flex;padding:8px 0;border-bottom:1px solid #223;font-size:0.8rem;color:var(--gold);text-transform:uppercase;">
+    <span style="width:28px;">#</span><span style="flex:1;">Player</span><span style="width:60px;text-align:right;">Points</span><span style="width:50px;text-align:right;">Wins</span>
+  </div>` + sorted.map((p, i) => {
+    const pts = tourney.scores[p] || 0;
+    const wins = tourney.wins[p] || 0;
+    const rankDisplay = i === 0 && pts > 0 ? '👑' : `${i + 1}`;
+    const cls = pts > 0 ? 'score-positive' : pts < 0 ? 'score-negative' : '';
+    return `<div class="tourney-score-row">
+      <span class="tourney-rank">${rankDisplay}</span>
+      <span class="tourney-name">${escHtml(p)}</span>
+      <span style="width:60px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;" class="${cls}">${pts}</span>
+      <span class="tourney-wins">${wins}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderTourneyLog() {
+  const list = document.getElementById('tourney-log-list');
+  const noLog = document.getElementById('no-tourney-log');
+
+  if (tourney.log.length === 0) {
+    noLog.style.display = 'block';
+    list.innerHTML = '';
+    return;
+  }
+  noLog.style.display = 'none';
+
+  list.innerHTML = [...tourney.log].reverse().map(entry => {
+    if (entry.move) {
+      return `<div class="hand-item">
+        <span class="hand-num">↔ Player Move</span>
+        <div class="hand-detail"><strong>${escHtml(entry.player)}</strong> moved: ${escHtml(entry.tableName)}</div>
+      </div>`;
+    }
+    let detail;
+    if (entry.winner) {
+      detail = `<strong>${escHtml(entry.winner)}</strong> won` + (entry.value ? ` (${entry.value} pts)` : '');
+      if (entry.penaltyPlayer && entry.penaltyAmount) {
+        detail += ` · Penalty: ${escHtml(entry.penaltyPlayer)} −${entry.penaltyAmount}`;
+      }
+    } else {
+      detail = 'Wall game — +10 to all';
+    }
+    return `<div class="hand-item">
+      <span class="hand-num">${escHtml(entry.tableName)} · Round ${entry.round}</span>
+      <div class="hand-detail">${detail}</div>
+    </div>`;
+  }).join('');
+}
+
+function exportTourneySummary() {
+  const sorted = [...tourney.players].sort((a, b) => (tourney.scores[b] || 0) - (tourney.scores[a] || 0));
+  const totalRounds = tourney.tables.reduce((sum, t) => sum + t.rounds.length, 0);
+  let lines = [
+    `🏆 ${tourney.name}`,
+    `Tables: ${tourney.tables.length} · Rounds: ${totalRounds}`,
+    '',
+    'Leaderboard:',
+  ];
+  sorted.forEach((p, i) => {
+    const pts = tourney.scores[p] || 0;
+    const wins = tourney.wins ? (tourney.wins[p] || 0) : pts;
+    lines.push(`  ${i + 1}. ${p}: ${pts} pts (${wins} wins)`);
+  });
+  lines.push('');
+  lines.push('Round Log:');
+  tourney.log.forEach(entry => {
+    if (entry.move) {
+      lines.push(`  ↔ ${entry.player} moved: ${entry.tableName}`);
+    } else {
+      let detail = entry.winner ? `${entry.winner} won` : 'Wall game';
+      if (entry.winner && entry.value) detail += ` (${entry.value} pts)`;
+      if (entry.penaltyPlayer && entry.penaltyAmount) detail += ` | Penalty: ${entry.penaltyPlayer} −${entry.penaltyAmount}`;
+      lines.push(`  ${entry.tableName} R${entry.round}: ${detail}`);
+    }
+  });
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Summary copied!');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Summary copied!');
+  });
+}
+
+function endTournament() {
+  if (!confirm('End the tournament? Scores will be cleared.')) return;
+  localStorage.removeItem(TOURNEY_STORAGE_KEY);
+  location.reload();
+}
+
+function saveTourneyState() {
+  localStorage.setItem(TOURNEY_STORAGE_KEY, JSON.stringify(tourney));
+}
+
+// ======================== TOURNAMENT SETUP: PLAYER POOL ========================
+// After player names are entered, clicking a table card shows the pool to pick from
+// Using a simpler approach: auto-assign button + manual drag
+
+function showPlayerPickerModal(tableId) {
+  const allPlayers = getTourneyPlayers();
+  const assigned = new Set();
+  document.querySelectorAll('.assigned-chip').forEach(chip => {
+    assigned.add(chip.dataset.player);
+  });
+
+  // Also check current table size
+  const card = document.getElementById(tableId);
+  const currentCount = card ? card.querySelectorAll('.assigned-chip').length : 0;
+  if (currentCount >= 4) {
+    showToast('Max 4 players per table');
+    return;
+  }
+
+  const available = allPlayers.filter(p => !assigned.has(p));
+  if (available.length === 0) {
+    showToast('All players assigned');
+    return;
+  }
+
+  // If only one available, just assign them
+  if (available.length === 1) {
+    assignPlayerToTable(tableId, available[0]);
+    return;
+  }
+
+  // Show a selection using the player pool chips in-place
+  // Replace the "Add Player" button temporarily
+  const btn = card.querySelector('.btn-small');
+  const original = btn.innerHTML;
+  const poolHtml = available.map(p =>
+    `<span class="pool-chip" onclick="pickForTable('${tableId}','${esc(p)}', this)">${escHtml(p)}</span>`
+  ).join(' ');
+  btn.outerHTML = `<div class="player-pool mt-8" id="picker-${tableId}">${poolHtml}
+    <span class="pool-chip" style="background:transparent;color:var(--text-dim);" onclick="cancelPicker('${tableId}')">Cancel</span>
+  </div>`;
+}
+
+function pickForTable(tableId, playerName, chipEl) {
+  playerName = playerName.replace(/\\'/g, "'");
+  assignPlayerToTable(tableId, playerName);
+  cancelPicker(tableId);
+}
+
+function cancelPicker(tableId) {
+  const picker = document.getElementById('picker-' + tableId);
+  if (picker) {
+    picker.outerHTML = `<button class="btn btn-secondary btn-small mt-8" onclick="showPlayerPickerModal('${tableId}')">+ Add Player</button>`;
+  }
+}
+
+// Auto-assign button: distribute unassigned players evenly
+function autoAssignPlayers() {
+  const allPlayers = getTourneyPlayers();
+  const tables = document.querySelectorAll('.table-setup-card');
+  if (tables.length === 0) return;
+
+  // Clear all assignments
+  document.querySelectorAll('.assigned-chip').forEach(c => c.remove());
+
+  // Distribute evenly
+  let tableIndex = 0;
+  const tableIds = [];
+  tables.forEach(t => tableIds.push(t.id));
+
+  allPlayers.forEach(p => {
+    assignPlayerToTable(tableIds[tableIndex % tableIds.length], p);
+    tableIndex++;
+  });
+}
+
+// Init on load
+init();
+
+// Also check for saved tournament on init
+(function() {
+  const saved = localStorage.getItem(TOURNEY_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.tables && parsed.tables.length > 0) {
+        // Show resume option on main screen too
+        const resumeSection = document.getElementById('resume-section');
+        if (resumeSection) {
+          resumeSection.style.display = 'block';
+        }
+      }
+    } catch(e) {}
+  }
+})();
+</script>
+</body>
+</html>

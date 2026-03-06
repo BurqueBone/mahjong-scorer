@@ -1579,17 +1579,6 @@ function renderTourneyTables() {
       </div>`;
     }
 
-    // Payment preview (penalty only, same as simple mode)
-    let previewHtml = '';
-    if (tui.penaltyPlayer && tui.penaltyAmount) {
-      previewHtml = `<div class="card" style="margin-top:10px;padding:12px;">
-        <h2 style="font-size:1rem;margin-bottom:8px;">Payment Preview</h2>
-        <div class="payment-line">
-          <span>${escHtml(tui.penaltyPlayer)} (penalty)</span>
-          <span class="pay-amount score-negative">−${tui.penaltyAmount}</span>
-        </div>
-      </div>`;
-    }
 
     // Record button state
     const canRecord = tui.wallGame || tui.selectedWinner;
@@ -1602,7 +1591,6 @@ function renderTourneyTables() {
       <div class="table-players">${playersHtml}${wallChip}</div>
       ${handValueHtml}
       ${penaltyHtml}
-      ${previewHtml}
       <div class="table-actions" style="margin-top:10px;">
         <button class="btn btn-primary btn-small" onclick="recordTableHand(${ti})" ${!canRecord ? 'disabled' : ''}>Record Hand</button>
         ${table.players.length > 0 ? `<button class="btn btn-move btn-small" onclick="toggleDropPanel(${ti})">Move Players</button>` : ''}

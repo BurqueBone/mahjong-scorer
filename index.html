@@ -1378,9 +1378,12 @@ function assignPlayerToTable(tableId, playerName) {
     if (chip.dataset.player === playerName) return;
   }
 
-  // Check table size limit (4 max)
+  // If table is full, create a new table and assign there instead
   if (existing.length >= 4) {
-    showToast('Max 4 players per table');
+    addTourneyTable();
+    const allTableCards = document.querySelectorAll('.table-setup-card');
+    const newTable = allTableCards[allTableCards.length - 1];
+    assignPlayerToTable(newTable.id, playerName);
     return;
   }
 
@@ -2063,13 +2066,20 @@ function cancelPicker(tableId) {
 // Auto-assign button: distribute unassigned players evenly
 function autoAssignPlayers() {
   const allPlayers = getTourneyPlayers();
-  const tables = document.querySelectorAll('.table-setup-card');
-  if (tables.length === 0) return;
+  if (allPlayers.length === 0) return;
 
   // Clear all assignments
   document.querySelectorAll('.assigned-chip').forEach(c => c.remove());
 
-  // Distribute evenly
+  // Ensure enough tables exist (ceil(players / 4))
+  const neededTables = Math.ceil(allPlayers.length / 4);
+  const currentTables = document.querySelectorAll('.table-setup-card').length;
+  for (let i = currentTables; i < neededTables; i++) {
+    addTourneyTable();
+  }
+
+  // Distribute evenly across all tables
+  const tables = document.querySelectorAll('.table-setup-card');
   let tableIndex = 0;
   const tableIds = [];
   tables.forEach(t => tableIds.push(t.id));

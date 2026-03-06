@@ -1172,6 +1172,7 @@ let tourney = {
   log: [],       // [{round, tableId, tableName, winner, value, penaltyPlayer, penaltyAmount, timestamp}]
   scores: {},    // player -> total points
   wins: {},      // player -> win count
+  roundsPlayed: {},  // player -> total rounds played
 };
 
 // Per-table UI state (not persisted)
@@ -1388,8 +1389,9 @@ function startTournament() {
     log: [],
     scores: {},
     wins: {},
+    roundsPlayed: {},
   };
-  tourney.players.forEach(p => { tourney.scores[p] = 0; tourney.wins[p] = 0; });
+  tourney.players.forEach(p => { tourney.scores[p] = 0; tourney.wins[p] = 0; tourney.roundsPlayed[p] = 0; });
 
   saveTourneyState();
   enterTourneyGame();
@@ -1402,6 +1404,10 @@ function resumeTournament() {
   if (!tourney.wins) {
     tourney.wins = {};
     tourney.players.forEach(p => { tourney.wins[p] = tourney.scores[p] || 0; });
+  }
+  if (!tourney.roundsPlayed) {
+    tourney.roundsPlayed = {};
+    tourney.players.forEach(p => { tourney.roundsPlayed[p] = 0; });
   }
   enterTourneyGame();
 }
@@ -1781,6 +1787,10 @@ function recordTableHand(ti) {
   const tui = tableUI[ti];
   const table = tourney.tables[ti];
 
+  // Count round played for all players at this table
+  if (!tourney.roundsPlayed) tourney.roundsPlayed = {};
+  table.players.forEach(p => { tourney.roundsPlayed[p] = (tourney.roundsPlayed[p] || 0) + 1; });
+
   if (tui.wallGame) {
     // Wall game: +10 to all at this table
     table.players.forEach(p => { tourney.scores[p] = (tourney.scores[p] || 0) + 10; });
@@ -1841,18 +1851,21 @@ function renderTourneyLeaderboard() {
   if (!tourney.wins) tourney.wins = {};
   const sorted = [...tourney.players].sort((a, b) => (tourney.scores[b] || 0) - (tourney.scores[a] || 0));
   const container = document.getElementById('tourney-leaderboard');
+  if (!tourney.roundsPlayed) tourney.roundsPlayed = {};
   container.innerHTML = `<div style="display:flex;padding:8px 0;border-bottom:1px solid #223;font-size:0.8rem;color:var(--gold);text-transform:uppercase;">
-    <span style="width:28px;">#</span><span style="flex:1;">Player</span><span style="width:60px;text-align:right;">Points</span><span style="width:50px;text-align:right;">Wins</span>
+    <span style="width:28px;">#</span><span style="flex:1;">Player</span><span style="width:55px;text-align:right;">Points</span><span style="width:45px;text-align:right;">Wins</span><span style="width:45px;text-align:right;">Rnds</span>
   </div>` + sorted.map((p, i) => {
     const pts = tourney.scores[p] || 0;
     const wins = tourney.wins[p] || 0;
+    const rounds = tourney.roundsPlayed[p] || 0;
     const rankDisplay = i === 0 && pts > 0 ? '👑' : `${i + 1}`;
     const cls = pts > 0 ? 'score-positive' : pts < 0 ? 'score-negative' : '';
     return `<div class="tourney-score-row">
       <span class="tourney-rank">${rankDisplay}</span>
       <span class="tourney-name">${escHtml(p)}</span>
-      <span style="width:60px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;" class="${cls}">${pts}</span>
-      <span class="tourney-wins">${wins}</span>
+      <span style="width:55px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;" class="${cls}">${pts}</span>
+      <span style="width:45px;text-align:right;font-weight:700;">${wins}</span>
+      <span style="width:45px;text-align:right;color:var(--text-dim);">${rounds}</span>
     </div>`;
   }).join('');
 }
@@ -1903,7 +1916,8 @@ function exportTourneySummary() {
   sorted.forEach((p, i) => {
     const pts = tourney.scores[p] || 0;
     const wins = tourney.wins ? (tourney.wins[p] || 0) : pts;
-    lines.push(`  ${i + 1}. ${p}: ${pts} pts (${wins} wins)`);
+    const rounds = tourney.roundsPlayed ? (tourney.roundsPlayed[p] || 0) : 0;
+    lines.push(`  ${i + 1}. ${p}: ${pts} pts (${wins} wins, ${rounds} rounds)`);
   });
   lines.push('');
   lines.push('Round Log:');
@@ -2040,4 +2054,3 @@ init();
 </script>
 </body>
 </html>
-

@@ -1596,14 +1596,16 @@ function renderTourneyTables() {
     return `<div class="table-card ${tui.selectedWinner || tui.wallGame ? 'recording' : ''}" id="tourney-table-${ti}">
       <div class="table-header">
         <span class="table-title">${escHtml(table.name)}</span>
-        <span class="table-round">Round ${roundNum}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="table-round">Round ${roundNum}</span>
+          ${table.players.length > 0 ? `<button class="btn btn-move btn-small" onclick="toggleDropPanel(${ti})" style="padding:4px 10px;font-size:0.75rem;">Move Players</button>` : ''}
+        </div>
       </div>
       <div class="table-players">${playersHtml}${wallChip}</div>
       ${handValueHtml}
       ${penaltyHtml}
       <div class="table-actions" style="margin-top:10px;">
         <button class="btn btn-primary btn-small" onclick="recordTableHand(${ti})" ${!canRecord ? 'disabled' : ''}>Record Hand</button>
-        ${table.players.length > 0 ? `<button class="btn btn-move btn-small" onclick="toggleDropPanel(${ti})">Move Players</button>` : ''}
       </div>
       <div id="drop-panel-${ti}"></div>
     </div>`;

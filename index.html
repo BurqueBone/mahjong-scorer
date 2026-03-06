@@ -310,38 +310,56 @@
   <p class="subtitle">American Mahjong &middot; Offline &middot; No account needed</p>
 
   <div class="card section">
-    <h2>Players</h2>
-    <div id="player-inputs"></div>
-    <button class="btn btn-secondary btn-small mt-8" id="add-player-btn" onclick="addPlayerInput()">+ Add Player</button>
-  </div>
-
-  <div class="card section">
-    <h2>Scoring Mode</h2>
-    <div class="mode-options" id="mode-options">
-      <div class="mode-option selected" data-mode="simple" onclick="selectMode('simple')">
-        <div class="mode-title">Simple Win Tracking</div>
-        <div class="mode-desc">Log winner + hand value. Running totals only.</div>
+    <h2>Game Mode</h2>
+    <div class="mode-options">
+      <div class="mode-option" data-gamemode="single" onclick="selectGameMode('single')">
+        <div class="mode-title">Single Table</div>
+        <div class="mode-desc">One table, 2–4 players. Track scores hand by hand.</div>
       </div>
-      <div class="mode-option" data-mode="money" onclick="selectMode('money')">
-        <div class="mode-title">Money-Based Payments</div>
-        <div class="mode-desc">Discarder pays 2×, others 1×. Self-pick, jokerless, 3-exposure rules.</div>
-      </div>
-      <div class="mode-option" data-mode="bigcard" onclick="selectMode('bigcard')">
-        <div class="mode-title">Full Big Card System</div>
-        <div class="mode-desc">Point bonuses (self-picked, jokerless, no exposures, finesse) + payment multipliers.</div>
+      <div class="mode-option" data-gamemode="tournament" onclick="selectGameMode('tournament')">
+        <div class="mode-title">🏆 Tournament Mode</div>
+        <div class="mode-desc">Multiple tables, rotate players, leaderboard across rounds.</div>
       </div>
     </div>
   </div>
 
-  <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+  <!-- Single table setup (hidden until selected) -->
+  <div id="single-setup" style="display:none;">
+    <div class="card section">
+      <h2>Players</h2>
+      <div id="player-inputs"></div>
+      <button class="btn btn-secondary btn-small mt-8" id="add-player-btn" onclick="addPlayerInput()">+ Add Player</button>
+    </div>
 
-  <div style="margin-top:20px; padding-top:16px; border-top:1px solid #ddd;">
-    <button class="btn btn-gold" onclick="showTourneySetup()">🏆 Tournament Mode</button>
+    <div class="card section">
+      <h2>Scoring Mode</h2>
+      <div class="mode-options" id="mode-options">
+        <div class="mode-option selected" data-mode="simple" onclick="selectMode('simple')">
+          <div class="mode-title">Simple Win Tracking</div>
+          <div class="mode-desc">Log winner + hand value. Running totals only.</div>
+        </div>
+        <div class="mode-option" data-mode="money" onclick="selectMode('money')">
+          <div class="mode-title">Money-Based Payments</div>
+          <div class="mode-desc">Discarder pays 2×, others 1×. Self-pick, jokerless, 3-exposure rules.</div>
+        </div>
+        <div class="mode-option" data-mode="bigcard" onclick="selectMode('bigcard')">
+          <div class="mode-title">Full Big Card System</div>
+          <div class="mode-desc">Point bonuses (self-picked, jokerless, no exposures, finesse) + payment multipliers.</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="startGame()">Start Game</button>
   </div>
 
   <div id="resume-section" style="display:none;" class="mt-16">
     <p class="text-center text-dim mb-8">You have a saved game in progress.</p>
-    <button class="btn btn-gold" onclick="resumeGame()">Resume Saved Game</button>
+    <div id="resume-game-btn" style="display:none;">
+      <button class="btn btn-gold" onclick="resumeGame()">Resume Single Table Game</button>
+    </div>
+    <div id="resume-tourney-btn" style="display:none;">
+      <button class="btn btn-gold mt-8" onclick="resumeTournament()">Resume Tournament</button>
+    </div>
   </div>
 </div>
 
@@ -498,10 +516,6 @@
   <button class="btn btn-primary" onclick="startTournament()">Start Tournament</button>
   <button class="btn btn-secondary" onclick="backToHome()">Back</button>
 
-  <div id="tourney-resume-section" style="display:none;" class="mt-16">
-    <p class="text-center text-dim mb-8">You have a saved tournament in progress.</p>
-    <button class="btn btn-gold" onclick="resumeTournament()">Resume Tournament</button>
-  </div>
 </div>
 
 <!-- ==================== TOURNAMENT GAME SCREEN ==================== -->
@@ -564,37 +578,68 @@ const STORAGE_KEY = 'mahjong_scorer_state';
 
 // ======================== SETUP ========================
 function init() {
+  let hasResume = false;
   // Check for saved game
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (parsed.players && parsed.players.length >= 3) {
-        document.getElementById('resume-section').style.display = 'block';
+      if (parsed.players && parsed.players.length >= 2) {
+        document.getElementById('resume-game-btn').style.display = 'block';
+        hasResume = true;
       }
     } catch(e) {}
   }
-  // Default 4 player inputs
-  const container = document.getElementById('player-inputs');
-  container.innerHTML = '';
-  for (let i = 0; i < 4; i++) addPlayerInput();
+  // Check for saved tournament
+  const savedTourney = localStorage.getItem(TOURNEY_STORAGE_KEY);
+  if (savedTourney) {
+    try {
+      const parsed = JSON.parse(savedTourney);
+      if (parsed.tables && parsed.tables.length > 0) {
+        document.getElementById('resume-tourney-btn').style.display = 'block';
+        hasResume = true;
+      }
+    } catch(e) {}
+  }
+  if (hasResume) {
+    document.getElementById('resume-section').style.display = 'block';
+  }
+}
+
+function selectGameMode(mode) {
+  document.querySelectorAll('#setup-screen .mode-option[data-gamemode]').forEach(el => {
+    el.classList.toggle('selected', el.dataset.gamemode === mode);
+  });
+
+  if (mode === 'single') {
+    document.getElementById('single-setup').style.display = 'block';
+    // Initialize player inputs with 2
+    const container = document.getElementById('player-inputs');
+    container.innerHTML = '';
+    for (let i = 0; i < 2; i++) addPlayerInput();
+    document.getElementById('add-player-btn').disabled = false;
+  } else if (mode === 'tournament') {
+    document.getElementById('single-setup').style.display = 'none';
+    showTourneySetup();
+  }
 }
 
 function addPlayerInput() {
   const container = document.getElementById('player-inputs');
   const count = container.children.length;
-  if (count >= 5) return;
+  if (count >= 4) return;
 
   const row = document.createElement('div');
   row.className = 'player-row';
+  const canRemove = count >= 2; // 3rd and 4th player can be removed
   row.innerHTML = `
     <span class="player-num">${count + 1}</span>
     <input type="text" placeholder="Player ${count + 1}" maxlength="20">
-    ${count >= 3 ? '<button class="remove-player" onclick="removePlayerInput(this)">✕</button>' : '<span style="width:32px"></span>'}
+    ${canRemove ? '<button class="remove-player" onclick="removePlayerInput(this)">✕</button>' : '<span style="width:32px"></span>'}
   `;
   container.appendChild(row);
 
-  if (container.children.length >= 5) {
+  if (container.children.length >= 4) {
     document.getElementById('add-player-btn').disabled = true;
   }
 }
@@ -602,9 +647,11 @@ function addPlayerInput() {
 function removePlayerInput(btn) {
   const row = btn.parentElement;
   row.remove();
-  // Renumber
+  // Renumber and update remove buttons
   const rows = document.querySelectorAll('#player-inputs .player-row');
-  rows.forEach((r, i) => r.querySelector('.player-num').textContent = i + 1);
+  rows.forEach((r, i) => {
+    r.querySelector('.player-num').textContent = i + 1;
+  });
   document.getElementById('add-player-btn').disabled = false;
 }
 
@@ -623,8 +670,8 @@ function startGame() {
     names.push(name);
   });
 
-  if (names.length < 3) {
-    showToast('Need at least 3 players');
+  if (names.length < 2) {
+    showToast('Need at least 2 players');
     return;
   }
 
@@ -1196,17 +1243,6 @@ let tourneySetup = {
 };
 
 function showTourneySetup() {
-  // Check for saved tournament
-  const saved = localStorage.getItem(TOURNEY_STORAGE_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed.tables && parsed.tables.length > 0) {
-        document.getElementById('tourney-resume-section').style.display = 'block';
-      }
-    } catch(e) {}
-  }
-
   showScreen('tourney-setup-screen');
   tourneySetup = { players: [], tables: [] };
 
@@ -2046,23 +2082,6 @@ function autoAssignPlayers() {
 
 // Init on load
 init();
-
-// Also check for saved tournament on init
-(function() {
-  const saved = localStorage.getItem(TOURNEY_STORAGE_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed.tables && parsed.tables.length > 0) {
-        // Show resume option on main screen too
-        const resumeSection = document.getElementById('resume-section');
-        if (resumeSection) {
-          resumeSection.style.display = 'block';
-        }
-      }
-    } catch(e) {}
-  }
-})();
 </script>
 </body>
 </html>

@@ -53,6 +53,9 @@
   .btn-danger { background: #e06070; color: #fff; box-shadow: 0 3px 10px rgba(224,96,112,0.3); }
   .btn-gold { background: linear-gradient(135deg, var(--yellow), var(--mint)); color: #2d2d2d; font-weight: 700; box-shadow: 0 3px 10px rgba(208,244,222,0.5); }
   .btn-move { background: var(--yellow); color: #2d2d2d; border: 1.5px solid #e8d98a; box-shadow: 0 2px 8px rgba(252,246,189,0.5); }
+  .btn-mint { background: var(--mint); color: #2d2d2d; border: 1.5px solid #a8ddb8; box-shadow: 0 2px 8px rgba(208,244,222,0.5); }
+  .btn-mauve { background: var(--mauve); color: #2d2d2d; border: 1.5px solid #cda4e0; box-shadow: 0 2px 8px rgba(228,193,249,0.4); }
+  .btn-blue { background: var(--blue); color: #2d2d2d; border: 1.5px solid #8ac8e8; box-shadow: 0 2px 8px rgba(169,222,249,0.4); }
   .btn + .btn { margin-top: 10px; }
   .btn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
 
@@ -498,19 +501,17 @@
     <h2>All Players</h2>
     <div id="tourney-player-inputs"></div>
     <div style="display:flex; gap:8px; margin-top:8px;">
-      <button class="btn btn-secondary btn-small" onclick="addTourneyPlayerInput()">+ Add Player</button>
+      <button class="btn btn-blue btn-small" onclick="addTourneyPlayerInput()">+ Add Player</button>
     </div>
   </div>
 
   <div class="section">
     <div class="flex-between mb-8">
       <h2 style="margin:0">Tables</h2>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-small" onclick="autoAssignPlayers()">Auto-Assign</button>
-        <button class="btn btn-secondary btn-small" onclick="addTourneyTable()">+ Table</button>
-      </div>
+      <button class="btn btn-mint btn-small" onclick="autoAssignPlayers()">Auto-Assign</button>
     </div>
     <div id="table-assignments"></div>
+    <button class="btn btn-mauve btn-small mt-8" onclick="addTourneyTable()">+ Table</button>
     <p class="text-dim mt-8" id="unassigned-msg"></p>
   </div>
 
@@ -1296,7 +1297,7 @@ function addTourneyTable() {
       <button class="remove-player" onclick="removeTourneyTable('${id}')">✕</button>
     </div>
     <div class="assigned-players" data-table-id="${id}"></div>
-    <button class="btn btn-secondary btn-small mt-8" onclick="showPlayerPickerModal('${id}')">+ Add Player</button>
+    <button class="btn btn-blue btn-small mt-8 add-player-to-table" onclick="showPlayerPickerModal('${id}')">+ Add Player</button>
   `;
   container.appendChild(card);
   updateAssignmentUI();
@@ -1330,6 +1331,15 @@ function updateAssignmentUI() {
   const unassignedCount = allPlayers.filter(p => !assigned.has(p)).length;
   document.getElementById('unassigned-msg').textContent =
     unassignedCount > 0 ? `${unassignedCount} player(s) not assigned to a table` : 'All players assigned!';
+
+  // Gray out add-player buttons on full tables
+  document.querySelectorAll('.table-setup-card').forEach(card => {
+    const count = card.querySelectorAll('.assigned-chip').length;
+    const addBtn = card.querySelector('.add-player-to-table');
+    if (addBtn) {
+      addBtn.disabled = count >= 4;
+    }
+  });
 }
 
 // Use event delegation for table player assignment
@@ -2046,7 +2056,8 @@ function pickForTable(tableId, playerName, chipEl) {
 function cancelPicker(tableId) {
   const picker = document.getElementById('picker-' + tableId);
   if (picker) {
-    picker.outerHTML = `<button class="btn btn-secondary btn-small mt-8" onclick="showPlayerPickerModal('${tableId}')">+ Add Player</button>`;
+    picker.outerHTML = `<button class="btn btn-blue btn-small mt-8 add-player-to-table" onclick="showPlayerPickerModal('${tableId}')">+ Add Player</button>`;
+    updateAssignmentUI();
   }
 }
 
